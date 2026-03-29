@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Agendamento</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>Agendamento</h1>
+
+      <div id="shopPicker">
+        <p>Informe o código da barbearia (shopId):</p>
+        <div class="row">
+          <input id="shopIdInput" placeholder="ex: 0mK9WSNXR1..." />
+          <button id="loadShopBtn">Carregar</button>
+        </div>
+        <p class="hint">
+          Dica: pode abrir como <code>?shopId=SEU_SHOP_ID</code>.
+        </p>
+      </div>
+
+      <div id="app" style="display: none">
+        <div class="grid">
+          <label>
+            Data
+            <input type="date" id="dateKey" />
+          </label>
+
+          <label>
+            Barbeiro
+            <select id="barberSelect"></select>
+          </label>
+
+          <label>
+            Serviço
+            <select id="serviceSelect"></select>
+          </label>
+        </div>
+
+        <h2>Horários livres</h2>
+        <div id="slots" class="slots"></div>
+
+        <div class="form">
+          <label>
+            Seu nome
+            <input id="clientName" type="text" placeholder="Nome completo" />
+          </label>
+
+          <label>
+            Telefone
+            <input id="clientPhone" type="tel" placeholder="(DDD) 9XXXX-XXXX" />
+          </label>
+        </div>
+
+        <div class="row">
+          <button id="bookBtn" class="primary">Confirmar agendamento</button>
+        </div>
+
+        <div id="status" class="status"></div>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
+

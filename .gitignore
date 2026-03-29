@@ -1,0 +1,22 @@
+# Dependências (Node — se usar npm/yarn ou Cloud Functions)
+node_modules/
+
+# Cache e logs do Firebase CLI
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+*.log
+
+# Variáveis de ambiente e segredos (NUNCA commitar)
+.env
+.env.*
+!.env.example
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editores / IDE (opcional — remova a linha se quiser versionar)
+.idea/
