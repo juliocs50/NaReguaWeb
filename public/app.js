@@ -56,10 +56,18 @@ async function fetchJson(url, options = {}) {
   try {
     res = await fetch(url, options);
   } catch (e) {
-    const msg =
-      e && (e.message === "Failed to fetch" || String(e.name) === "TypeError")
-        ? "Sem ligação à API. No Netlify use o endereço /api (mesmo site), confira netlify.toml e faça deploy. Se a função estiver nova, faça firebase deploy --only functions e permita invocação pública (IAM)."
-        : (e && e.message) || "Erro de rede.";
+    const isNet =
+      e &&
+      (e.message === "Failed to fetch" || String(e.name) === "TypeError");
+    const usingDirectGoogle =
+      typeof url === "string" && url.includes("cloudfunctions.net");
+    let msg =
+      (e && e.message) || "Erro de rede.";
+    if (isNet) {
+      msg = usingDirectGoogle
+        ? "Ligação bloqueada (CORS/rede). Deixe api-config.js vazio para usar /api no Netlify, ou faça deploy com _redirects."
+        : "Não foi possível falar com /api. Confirme deploy no Netlify (ficheiros _redirects e netlify.toml) e firebase deploy --only functions.";
+    }
     throw new Error(msg);
   }
   const text = await res.text().catch(() => "");

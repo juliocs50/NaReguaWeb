@@ -1,9 +1,8 @@
 /**
- * URL da Cloud Function `naReguaWebApi` (mesmo projeto que o Android: naregua-61564).
- * Se no Firebase Console a URL for diferente (ex.: Gen2), copie de lá e substitua abaixo.
+ * IMPORTANTE: deixe vazio para usar **/api** no mesmo domínio (Netlify → proxy → Firebase).
+ * Assim o browser NÃO chama cloudfunctions.net direto → evita "Failed to fetch" por CORS.
  *
- * Com CORS na função, o browser pode chamar este URL direto a partir do Netlify.
+ * Só preencha com URL completa se souber o que está a fazer (testes locais, etc.):
+ * window.NA_REGUA_API_BASE = "https://southamerica-east1-naregua-61564.cloudfunctions.net/naReguaWebApi";
  */
-window.NA_REGUA_API_BASE =
-  window.NA_REGUA_API_BASE ||
-  "https://southamerica-east1-naregua-61564.cloudfunctions.net/naReguaWebApi";
+window.NA_REGUA_API_BASE = window.NA_REGUA_API_BASE || "";
