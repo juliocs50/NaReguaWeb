@@ -3,66 +3,114 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Agendamento</title>
+    <meta name="theme-color" content="#6650a4" />
+    <title>Na Régua — Agendar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="styles.css" />
+    <!--
+      Netlify: o proxy /api → Cloud Function está no netlify.toml.
+      Se testar sem proxy, defina a URL completa da função naReguaWebApi:
+      <script>window.NA_REGUA_API_BASE = "https://southamerica-east1-SEU_PROJETO.cloudfunctions.net/naReguaWebApi";</script>
+    -->
   </head>
   <body>
-    <div class="container">
-      <h1>Agendamento</h1>
+    <header class="top-bar">
+      <div class="top-bar-inner">
+        <a href="/" class="brand" id="brandLink">
+          <span class="brand-mark">Na Régua</span>
+          <span class="brand-sub">agendamento</span>
+        </a>
+        <div class="top-bar-right">
+          <span id="shopBadge" class="shop-badge" hidden></span>
+        </div>
+      </div>
+    </header>
 
-      <div id="shopPicker">
-        <p>Informe o código da barbearia (shopId):</p>
+    <main class="main">
+      <!-- Landing: escolher barbearia -->
+      <section id="shopPicker" class="card">
+        <h1 class="title">Marque seu horário</h1>
+        <p class="lead">
+          Escolha a barbearia pelo link (ex.: <code>/ja-barber</code>) ou informe o código
+          <strong>shopId</strong> se você tiver.
+        </p>
+        <label class="field">
+          <span class="field-label">Código da barbearia (shopId)</span>
+          <input
+            id="shopIdInput"
+            type="text"
+            autocomplete="off"
+            placeholder="Cole o ID do Firestore"
+          />
+        </label>
         <div class="row">
-          <input id="shopIdInput" placeholder="ex: 0mK9WSNXR1..." />
-          <button id="loadShopBtn">Carregar</button>
+          <button type="button" id="loadShopBtn" class="btn btn-filled">Continuar</button>
         </div>
         <p class="hint">
-          Dica: pode abrir como <code>?shopId=SEU_SHOP_ID</code>.
+          Link direto: <code>https://…netlify.app/<strong>nome-da-barbearia</strong></code> — o nome
+          usa o mesmo critério do cadastro (ou o campo <code>slug</code> no Firestore).
         </p>
-      </div>
+        <div id="pickerStatus" class="msg" role="status"></div>
+      </section>
 
-      <div id="app" style="display: none">
-        <div class="grid">
-          <label>
-            Data
+      <!-- Fluxo de agendamento -->
+      <section id="app" class="booking" hidden>
+        <div class="card booking-head">
+          <h2 class="section-title" id="bookingTitle">Agendar</h2>
+          <p class="muted" id="bookingSubtitle"></p>
+        </div>
+
+        <div class="card grid-3">
+          <label class="field">
+            <span class="field-label">Data</span>
             <input type="date" id="dateKey" />
           </label>
-
-          <label>
-            Barbeiro
+          <label class="field">
+            <span class="field-label">Barbeiro</span>
             <select id="barberSelect"></select>
           </label>
-
-          <label>
-            Serviço
+          <label class="field">
+            <span class="field-label">Serviço</span>
             <select id="serviceSelect"></select>
           </label>
         </div>
 
-        <h2>Horários livres</h2>
-        <div id="slots" class="slots"></div>
+        <div class="card">
+          <h3 class="subsection-title">Horários livres</h3>
+          <div id="slots" class="slots"></div>
+        </div>
 
-        <div class="form">
-          <label>
-            Seu nome
-            <input id="clientName" type="text" placeholder="Nome completo" />
+        <div class="card grid-2">
+          <label class="field">
+            <span class="field-label">Seu nome</span>
+            <input id="clientName" type="text" autocomplete="name" placeholder="Nome completo" />
           </label>
-
-          <label>
-            Telefone
-            <input id="clientPhone" type="tel" placeholder="(DDD) 9XXXX-XXXX" />
+          <label class="field">
+            <span class="field-label">Telefone</span>
+            <input id="clientPhone" type="tel" autocomplete="tel" placeholder="(DDD) 9XXXX-XXXX" />
           </label>
         </div>
 
-        <div class="row">
-          <button id="bookBtn" class="primary">Confirmar agendamento</button>
+        <div class="card actions">
+          <button type="button" id="bookBtn" class="btn btn-filled">Confirmar agendamento</button>
+          <p class="fee-note">
+            Pode incluir taxa do app (R$&nbsp;1,00), como no aplicativo para clientes.
+          </p>
         </div>
 
-        <div id="status" class="status"></div>
-      </div>
-    </div>
+        <div id="status" class="msg" role="status"></div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>Na Régua</span>
+    </footer>
 
     <script src="app.js"></script>
   </body>
 </html>
-

@@ -1,26 +1,42 @@
-# NaReguaWeb (Agendamento)
+# NaReguaWeb — agendamento para clientes
 
-Projeto web estático (HTML/JS) para o cliente ver horários e agendar.
+Site estático focado em **marcar horário** (nome + telefone), alinhado visualmente ao app **Na Régua** (Material / roxo).
 
-## Como usar
-1. Garanta que as Cloud Functions já foram deployadas no Firebase:
-   - `naReguaWebApi`
-2. Configure/ateive Firebase Hosting para esta pasta.
-3. Depois de fazer `firebase deploy`, o site fica acessível.
+## URL amigável por barbearia
 
-## URL
-Abra algo como:
-`https://SEU_SITE/?shopId=ID_DA_BARBEARIA`
+Use o **primeiro segmento do caminho** como identificador:
 
-Se não passar `shopId`, a página pede manualmente.
+`https://SEU_SITE.netlify.app/ja-barber`
 
-## Campos do agendamento
-O cliente informa somente:
-- Nome
-- Telefone
+O backend resolve o slug assim (Firestore, coleção `barbershops`):
 
-E seleciona:
-- Barbeiro
-- Serviço
-- Horário livre
+1. Campo opcional **`slug`** (ex.: `ja-barber`) — recomendado para URL curta e estável.
+2. Campo **`nameLowercase`** (igual ao app): comparação exata ou com hífens trocados por espaço  
+   (ex.: URL `ja-barber` ↔ `nameLowercase` `ja barber`).
 
+Exemplo: nome da barbearia **JaBarber** → `nameLowercase` costuma ser **`jabarber`** → link:  
+`https://…/jabarber`
+
+Se quiser um texto com espaços no Firestore, use hífen na URL:  
+`ja barber` → `…/ja-barber`
+
+## API (Cloud Function `naReguaWebApi`)
+
+Após deploy das Functions no Firebase, configure:
+
+- **Netlify:** edite `netlify.toml` e substitua `SEU_PROJECT_ID` pela URL real da função.
+- Ou **Firebase Hosting:** use o `firebase.json` desta pasta (rewrites `/api` + SPA).
+
+Variável opcional no HTML (só se não usar proxy `/api`):
+
+```html
+<script>
+  window.NA_REGUA_API_BASE = "https://southamerica-east1-XXX.cloudfunctions.net/naReguaWebApi";
+</script>
+```
+
+## Deploy
+
+1. `firebase deploy --only functions` (no repositório do app Android, pasta `functions`) para publicar `naReguaWebApi` com `resolveShop`.
+2. Ajustar `netlify.toml` com a URL da função.
+3. Push no Netlify (ou `firebase deploy --only hosting` se usar Firebase Hosting).
