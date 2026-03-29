@@ -12,11 +12,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
-    <!--
-      Netlify: o proxy /api → Cloud Function está no netlify.toml.
-      Se testar sem proxy, defina a URL completa da função naReguaWebApi:
-      <script>window.NA_REGUA_API_BASE = "https://southamerica-east1-SEU_PROJETO.cloudfunctions.net/naReguaWebApi";</script>
-    -->
+    <script src="api-config.js"></script>
   </head>
   <body>
     <header class="top-bar">
@@ -36,8 +32,8 @@
       <section id="shopPicker" class="card">
         <h1 class="title">Marque seu horário</h1>
         <p class="lead">
-          Escolha a barbearia pelo link (ex.: <code>/ja-barber</code>) ou informe o código
-          <strong>shopId</strong> se você tiver.
+          Use o link da sua barbearia (ex.: <code>/jabarber</code>) ou informe o
+          <strong>shopId</strong> se tiver o código.
         </p>
         <label class="field">
           <span class="field-label">Código da barbearia (shopId)</span>
@@ -52,10 +48,10 @@
           <button type="button" id="loadShopBtn" class="btn btn-filled">Continuar</button>
         </div>
         <p class="hint">
-          Link direto: <code>https://…netlify.app/<strong>nome-da-barbearia</strong></code> — o nome
-          usa o mesmo critério do cadastro (ou o campo <code>slug</code> no Firestore).
+          Exemplo de link: <code>…netlify.app/jabarber</code> (igual ao
+          <code>nameLowercase</code> no Firestore, ou campo <code>slug</code>).
         </p>
-        <div id="pickerStatus" class="msg" role="status"></div>
+        <div id="pickerStatus" class="msg" role="status" aria-live="polite"></div>
       </section>
 
       <!-- Fluxo de agendamento -->

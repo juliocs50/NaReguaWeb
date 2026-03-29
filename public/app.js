@@ -1,10 +1,78 @@
 /**
- * API: mesma Cloud Function `naReguaWebApi` (Firebase ou proxy Netlify em /api).
+ * API: Cloud Function `naReguaWebApi` via `/api` (Netlify) ou URL em `api-config.js`.
  */
-const apiBase =
-  (typeof window !== "undefined" && window.NA_REGUA_API_BASE) || "/api";
+function getApiBase() {
+  const w = typeof window !== "undefined" ? window : undefined;
+  const custom = w?.NA_REGUA_API_BASE;
+  if (typeof custom === "string" && custom.trim().length > 0) {
+    return custom.replace(/\/$/, "");
+  }
+  return "/api";
+}
 
 const $ = (id) => document.getElementById(id);
+
+function looksLikeHtml(s) {
+  if (!s || typeof s !== "string") return false;
+  const t = s.trim().toLowerCase();
+  return (
+    t.startsWith("<!doctype") ||
+    t.startsWith("<html") ||
+    t.includes("<html") ||
+    t.includes("page not found")
+  );
+}
+
+/** Nunca mostrar HTML bruto ao utilizador. */
+function humanizeApiError(status, bodyText) {
+  if (looksLikeHtml(bodyText)) {
+    if (status === 404) {
+      return (
+        "A API não foi encontrada (404). No Netlify, abra netlify.toml e substitua SEU_PROJECT_ID pela URL real da função naReguaWebApi, " +
+        "ou edite public/api-config.js com essa URL e faça deploy de novo."
+      );
+    }
+    return (
+      "O servidor devolveu uma página de erro (HTML). Confirme o proxy /api no Netlify e o deploy das Cloud Functions."
+    );
+  }
+  const raw = (bodyText || "").trim();
+  if (!raw) {
+    if (status === 0) return "Sem ligação à internet.";
+    return `Erro ${status}. Tente novamente.`;
+  }
+  try {
+    const j = JSON.parse(raw);
+    if (j && typeof j.error === "string") return j.error;
+  } catch (_) {
+    /* texto simples */
+  }
+  if (raw.length > 220) return raw.slice(0, 220) + "…";
+  return raw;
+}
+
+async function fetchJson(url, options = {}) {
+  const res = await fetch(url, options);
+  const text = await res.text().catch(() => "");
+
+  if (!res.ok) {
+    throw new Error(humanizeApiError(res.status, text));
+  }
+
+  if (!text || !text.trim()) return {};
+
+  if (looksLikeHtml(text)) {
+    throw new Error(humanizeApiError(200, text));
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (_) {
+    throw new Error(
+      "Resposta inválida do servidor (não é JSON). Verifique a URL da API em api-config.js ou o netlify.toml."
+    );
+  }
+}
 
 function toDateKey(date = new Date()) {
   const y = date.getFullYear();
@@ -26,23 +94,6 @@ function getSlugFromPath() {
   const first = parts[0];
   if (first === "index.html") return null;
   return decodeURIComponent(first);
-}
-
-async function fetchJson(url, options = {}) {
-  const res = await fetch(url, options);
-  const text = await res.text().catch(() => "");
-  if (!res.ok) {
-    let msg = text || res.statusText;
-    try {
-      const j = JSON.parse(text);
-      if (j.error) msg = j.error;
-    } catch (_) {
-      /* ignore */
-    }
-    throw new Error(msg);
-  }
-  if (!text) return {};
-  return JSON.parse(text);
 }
 
 function renderOptions(selectEl, items, getValue, getLabel) {
@@ -92,7 +143,7 @@ function hideShopHeader() {
 
 async function resolveAndLoad(slug) {
   const r = await fetchJson(
-    `${apiBase}?action=resolveShop&slug=${encodeURIComponent(slug)}`
+    `${getApiBase()}?action=resolveShop&slug=${encodeURIComponent(slug)}`
   );
   window.__shopId = r.shopId;
   window.__shopName = r.name || "";
@@ -108,9 +159,10 @@ async function resolveAndLoad(slug) {
 }
 
 async function loadData(shopId) {
+  const base = getApiBase();
   const [barbersRes, servicesRes] = await Promise.all([
-    fetchJson(`${apiBase}?action=barbers&shopId=${encodeURIComponent(shopId)}`),
-    fetchJson(`${apiBase}?action=services&shopId=${encodeURIComponent(shopId)}`),
+    fetchJson(`${base}?action=barbers&shopId=${encodeURIComponent(shopId)}`),
+    fetchJson(`${base}?action=services&shopId=${encodeURIComponent(shopId)}`),
   ]);
 
   const barbers = barbersRes.barbers || [];
@@ -145,38 +197,43 @@ async function loadAvailability() {
   const barberId = $("barberSelect").value;
   if (!shopId || !dateKey || !barberId) return;
 
-  setStatus("Carregando horários...");
-  const res = await fetchJson(
-    `${apiBase}?action=availability&shopId=${encodeURIComponent(
-      shopId
-    )}&dateKey=${encodeURIComponent(dateKey)}&barberId=${encodeURIComponent(barberId)}`
-  );
-  const slots = res.slots || [];
-
   const slotsEl = $("slots");
-  slotsEl.innerHTML = "";
-  window.__selectedTimeLabel = null;
+  try {
+    setStatus("Carregando horários...");
+    const res = await fetchJson(
+      `${getApiBase()}?action=availability&shopId=${encodeURIComponent(
+        shopId
+      )}&dateKey=${encodeURIComponent(dateKey)}&barberId=${encodeURIComponent(barberId)}`
+    );
+    const slots = res.slots || [];
 
-  if (!slots.length) {
-    slotsEl.innerHTML = `<p class="muted">Sem horários livres neste dia para este barbeiro.</p>`;
-    setStatus("Escolha outra data ou outro barbeiro.");
-    return;
+    slotsEl.innerHTML = "";
+    window.__selectedTimeLabel = null;
+
+    if (!slots.length) {
+      slotsEl.innerHTML = `<p class="muted">Sem horários livres neste dia para este barbeiro.</p>`;
+      setStatus("Escolha outra data ou outro barbeiro.");
+      return;
+    }
+
+    for (const t of slots) {
+      const btn = document.createElement("button");
+      btn.className = "slot";
+      btn.type = "button";
+      btn.textContent = t;
+      btn.addEventListener("click", () => {
+        window.__selectedTimeLabel = t;
+        slotsEl.querySelectorAll(".slot").forEach((b) => b.classList.remove("selected"));
+        btn.classList.add("selected");
+      });
+      slotsEl.appendChild(btn);
+    }
+
+    setStatus("Toque em um horário livre.");
+  } catch (e) {
+    slotsEl.innerHTML = "";
+    setStatus(e.message || "Erro ao carregar horários.", true);
   }
-
-  for (const t of slots) {
-    const btn = document.createElement("button");
-    btn.className = "slot";
-    btn.type = "button";
-    btn.textContent = t;
-    btn.addEventListener("click", () => {
-      window.__selectedTimeLabel = t;
-      slotsEl.querySelectorAll(".slot").forEach((b) => b.classList.remove("selected"));
-      btn.classList.add("selected");
-    });
-    slotsEl.appendChild(btn);
-  }
-
-  setStatus("Toque em um horário livre.");
 }
 
 function getSelectedService() {
@@ -209,17 +266,21 @@ async function book() {
     serviceId: service.id,
   };
 
-  const r = await fetchJson(`${apiBase}?action=book`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  try {
+    const r = await fetchJson(`${getApiBase()}?action=book`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
 
-  $("slots").querySelectorAll(".slot").forEach((b) => {
-    b.disabled = true;
-  });
-  setStatus(`Agendamento confirmado. Referência: ${r.appointmentId || "-"}.`);
-  await loadAvailability();
+    $("slots").querySelectorAll(".slot").forEach((b) => {
+      b.disabled = true;
+    });
+    setStatus(`Agendamento confirmado. Referência: ${r.appointmentId || "-"}.`);
+    await loadAvailability();
+  } catch (e) {
+    setStatus(e.message || "Não foi possível confirmar. Tente novamente.", true);
+  }
 }
 
 async function init() {
@@ -253,7 +314,9 @@ async function init() {
 
   $("dateKey").addEventListener("change", loadAvailability);
   $("barberSelect").addEventListener("change", loadAvailability);
-  $("bookBtn").addEventListener("click", book);
+  $("bookBtn").addEventListener("click", () => {
+    book().catch((e) => setStatus(e.message || "Erro ao agendar.", true));
+  });
 
   // /slug → resolve shop
   if (slugFromPath) {

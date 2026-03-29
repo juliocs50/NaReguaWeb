@@ -271,10 +271,14 @@ select:focus {
   font-size: 0.9rem;
   min-height: 1.25em;
   color: var(--ok);
+  line-height: 1.45;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 .msg.err {
   color: var(--danger);
+  white-space: pre-wrap;
 }
 
 .footer {

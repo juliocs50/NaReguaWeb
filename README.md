@@ -40,3 +40,10 @@ Variável opcional no HTML (só se não usar proxy `/api`):
 1. `firebase deploy --only functions` (no repositório do app Android, pasta `functions`) para publicar `naReguaWebApi` com `resolveShop`.
 2. Ajustar `netlify.toml` com a URL da função.
 3. Push no Netlify (ou `firebase deploy --only hosting` se usar Firebase Hosting).
+
+## Erro 404 / HTML na página
+
+Se aparecer mensagem sobre **API não encontrada (404)** ou texto estranho, o proxy `/api` do Netlify não está a bater na Cloud Function. Corrija **uma** destas opções:
+
+- Em `netlify.toml`, substitua `SEU_PROJECT_ID` pela URL completa copiada no Firebase (Functions → `naReguaWebApi` → URL).
+- Ou edite `public/api-config.js` e defina `window.NA_REGUA_API_BASE = "https://…/naReguaWebApi";` (URL direta, sem depender do proxy).
