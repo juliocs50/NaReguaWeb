@@ -1,0 +1,15 @@
+# Site estático em public/
+#
+# 1) No Firebase Console → Functions → naReguaWebApi → copie a URL HTTPS
+#    Ex.: https://us-central1-meu-projeto.cloudfunctions.net/naReguaWebApi
+# 2) Substitua a URL em "to" abaixo (REGIAO e PROJECT_ID)
+
+[build]
+  publish = "public"
+
+# Proxy: o front usa fetch("/api?...") na mesma origem; sem isso a API não existe no Netlify
+[[redirects]]
+  from = "/api*"
+  to = "https://us-central1-SEU_PROJECT_ID.cloudfunctions.net/naReguaWebApi"
+  status = 200
+  force = true
