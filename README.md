@@ -2,6 +2,8 @@
 
 Site estático focado em **marcar horário** (nome + telefone), alinhado visualmente ao app **Na Régua** (Material / roxo).
 
+O site usa o **mesmo projeto Firebase** que o Android (`project_id`: **naregua-61564**, ver `app/google-services.json`). As Cloud Functions são as do repositório NaRegua (`functions/`), deploy com `firebase deploy --only functions`.
+
 ## URL amigável por barbearia
 
 Use o **primeiro segmento do caminho** como identificador:

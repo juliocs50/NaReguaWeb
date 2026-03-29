@@ -1,26 +1,21 @@
-# Site estático em public/
-#
-# 1) No Firebase Console → Functions → naReguaWebApi → copie a URL HTTPS
-#    Ex.: https://southamerica-east1-SEU_PROJECT_ID.cloudfunctions.net/naReguaWebApi
-# 2) Substitua a URL em "to" abaixo (região southamerica-east1 se usar essa região nas Functions)
+# Mesmo Firebase que o Android: projeto naregua-61564
+# (proxy /api opcional — o site também usa api-config.js com a URL direta da Function)
 
 [build]
   publish = "public"
 
-# Proxy: o front usa fetch("/api?...") na mesma origem
 [[redirects]]
   from = "/api"
-  to = "https://southamerica-east1-SEU_PROJECT_ID.cloudfunctions.net/naReguaWebApi"
+  to = "https://southamerica-east1-naregua-61564.cloudfunctions.net/naReguaWebApi"
   status = 200
   force = true
 
 [[redirects]]
   from = "/api/*"
-  to = "https://southamerica-east1-SEU_PROJECT_ID.cloudfunctions.net/naReguaWebApi"
+  to = "https://southamerica-east1-naregua-61564.cloudfunctions.net/naReguaWebApi"
   status = 200
   force = true
 
-# SPA: /nome-da-barbearia → index.html (app.js lê o path e resolve o slug)
 [[redirects]]
   from = "/*"
   to = "/index.html"
