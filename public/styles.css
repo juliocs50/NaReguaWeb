@@ -106,6 +106,126 @@ body {
   font-size: 0.95rem;
 }
 
+/* Página inicial — lista de barbearias */
+.landing-hero {
+  padding-top: 28px;
+  padding-bottom: 28px;
+}
+
+.landing-kicker {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--md-sys-color-primary);
+}
+
+.landing-title {
+  margin-bottom: 12px;
+}
+
+.landing-lead {
+  margin-bottom: 24px;
+}
+
+.landing-search-wrap input[type="search"] {
+  font-size: 1.05rem;
+}
+
+.landing-loading {
+  margin: 12px 0 8px;
+  min-height: 1.25em;
+}
+
+.landing-loading.err {
+  color: var(--danger);
+}
+
+.landing-empty {
+  margin: 12px 0 0;
+}
+
+.shop-directory-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.shop-pick-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(102, 80, 164, 0.2);
+  background: var(--md-sys-color-surface-container);
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.shop-pick-card:hover {
+  background: var(--md-sys-color-surface-container-high);
+  border-color: rgba(102, 80, 164, 0.45);
+  box-shadow: 0 2px 8px rgba(102, 80, 164, 0.12);
+}
+
+.shop-pick-card:focus-visible {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: 2px;
+}
+
+.shop-pick-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.shop-pick-name {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--md-sys-color-on-surface);
+}
+
+.shop-pick-url {
+  font-size: 0.78rem;
+  color: var(--md-sys-color-on-surface-variant);
+  word-break: break-all;
+}
+
+.shop-pick-arrow {
+  flex-shrink: 0;
+  font-size: 1.25rem;
+  color: var(--md-sys-color-primary);
+  font-weight: 600;
+}
+
+.landing-advanced {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(102, 80, 164, 0.15);
+}
+
+.landing-advanced-summary {
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.9rem;
+}
+
+.landing-advanced-summary:hover {
+  color: var(--md-sys-color-primary);
+}
+
+.landing-advanced-hint {
+  margin-top: 12px;
+}
+
 .section-title {
   margin: 0 0 4px;
   font-size: 1.25rem;

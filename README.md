@@ -9,7 +9,7 @@ Site estático que fala **direto com o Firestore** (SDK Web), como o app Android
 1. **Authentication** → **Sign-in method** → ativar **Anonymous** (anónimo).  
    As regras atuais exigem `request.auth != null`; o site faz `signInAnonymously()`.
 
-2. (Opcional) **Firestore** → regras: as tuas regras já permitem leitura/escrita para qualquer utilizador autenticado (incluindo anónimo).
+2. **Firestore** → regras: o site usa utilizador **anónimo** (`request.auth != null`). A **página inicial** lista barbearias com `collection("barbershops").get()` — é preciso permitir **leitura em lista** da coleção `barbershops` (não só `get` num documento), por exemplo: `allow read: if request.auth != null` em `match /barbershops/{shopId}` (isso cobre queries na coleção).
 
 ## Ficheiros
 

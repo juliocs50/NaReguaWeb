@@ -148,6 +148,124 @@ async function resolveShopSlug(slug) {
   return null;
 }
 
+/** Segmento de URL público (igual ao slug / nameLowercase no Firestore). */
+function pathSlugFromShopData(d) {
+  const slug = d.slug != null ? String(d.slug).trim() : "";
+  if (slug) return slug.toLowerCase().replace(/\s+/g, "-");
+  const nl = d.nameLowercase != null ? String(d.nameLowercase).trim() : "";
+  if (nl) return nl.toLowerCase().replace(/\s+/g, "-");
+  return "";
+}
+
+async function loadBarbershopDirectory() {
+  const snap = await db.collection("barbershops").limit(400).get();
+  const list = [];
+  snap.docs.forEach(function (doc) {
+    const d = doc.data();
+    const pathSlug = pathSlugFromShopData(d);
+    if (!pathSlug) return;
+    const name = (d.name && String(d.name).trim()) || "Barbearia";
+    list.push({ name: name, pathSlug: pathSlug });
+  });
+  list.sort(function (a, b) {
+    return a.name.localeCompare(b.name, "pt-BR");
+  });
+  return list;
+}
+
+function renderShopDirectoryList(filterRaw) {
+  const container = $("shopDirectoryList");
+  const emptyEl = $("shopDirectoryEmpty");
+  const all = window.__shopDirectory || [];
+  if (!container || !emptyEl) return;
+
+  const q = normalizeClientName(filterRaw || "");
+  const filtered = !q
+    ? all.slice()
+    : all.filter(function (s) {
+        const nameN = normalizeClientName(s.name);
+        const slugN = normalizeClientName(s.pathSlug.replace(/-/g, " "));
+        return (
+          nameN.includes(q) ||
+          slugN.includes(q) ||
+          s.pathSlug.toLowerCase().includes(String(filterRaw).trim().toLowerCase())
+        );
+      });
+
+  container.innerHTML = "";
+  if (!all.length) {
+    emptyEl.hidden = false;
+    emptyEl.textContent =
+      "Nenhuma barbearia com link público encontrada. Quem gere a conta pode usar o código abaixo.";
+    return;
+  }
+  if (!filtered.length) {
+    emptyEl.hidden = false;
+    emptyEl.textContent = "Nenhuma barbearia encontrada com esse termo.";
+    return;
+  }
+  emptyEl.hidden = true;
+
+  filtered.forEach(function (s) {
+    const a = document.createElement("a");
+    a.className = "shop-pick-card";
+    a.href = "/" + encodeURIComponent(s.pathSlug);
+    const main = document.createElement("span");
+    main.className = "shop-pick-main";
+    const title = document.createElement("span");
+    title.className = "shop-pick-name";
+    title.textContent = s.name;
+    const sub = document.createElement("span");
+    sub.className = "shop-pick-url";
+    sub.textContent =
+      window.location.origin.replace(/\/$/, "") + "/" + s.pathSlug;
+    main.appendChild(title);
+    main.appendChild(sub);
+    const arrow = document.createElement("span");
+    arrow.className = "shop-pick-arrow";
+    arrow.setAttribute("aria-hidden", "true");
+    arrow.textContent = "→";
+    a.appendChild(main);
+    a.appendChild(arrow);
+    container.appendChild(a);
+  });
+}
+
+let shopDirectoryLoaded = false;
+
+async function setupLandingDirectory() {
+  const loading = $("shopDirectoryLoading");
+  const listEl = $("shopDirectoryList");
+  const search = $("shopSearch");
+
+  if (shopDirectoryLoaded) {
+    renderShopDirectoryList(search ? search.value : "");
+    if (listEl) listEl.hidden = false;
+    if (loading) loading.hidden = true;
+    return;
+  }
+
+  try {
+    const list = await loadBarbershopDirectory();
+    window.__shopDirectory = list;
+    shopDirectoryLoaded = true;
+    if (loading) {
+      loading.hidden = true;
+    }
+    if (listEl) {
+      listEl.hidden = false;
+    }
+    renderShopDirectoryList(search ? search.value : "");
+  } catch (e) {
+    if (loading) {
+      loading.textContent =
+        e.message || "Não foi possível carregar a lista de barbearias.";
+      loading.classList.add("err");
+    }
+    setPickerStatus(e.message || "Erro ao carregar barbearias.", true);
+  }
+}
+
 async function loadBarbers(shopId) {
   const snap = await db
     .collection("barbershops")
@@ -563,6 +681,13 @@ async function init() {
     });
   });
 
+  const shopSearch = $("shopSearch");
+  if (shopSearch) {
+    shopSearch.addEventListener("input", function () {
+      renderShopDirectoryList(this.value);
+    });
+  }
+
   if (slugFromPath) {
     setPickerStatus("Abrindo barbearia…");
     try {
@@ -571,11 +696,12 @@ async function init() {
     } catch (e) {
       setPickerStatus(
         e.message ||
-          "Barbearia não encontrada. Verifique o nome no link ou use o shopId.",
+          "Barbearia não encontrada. Verifique o nome no link ou escolha na lista.",
         true
       );
       $("shopPicker").hidden = false;
       $("app").hidden = true;
+      await setupLandingDirectory();
     }
     return;
   }
@@ -583,7 +709,10 @@ async function init() {
   if (queryShopId) {
     $("shopIdInput").value = queryShopId;
     $("loadShopBtn").click();
+    return;
   }
+
+  await setupLandingDirectory();
 }
 
 init();

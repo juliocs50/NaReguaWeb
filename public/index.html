@@ -32,29 +32,56 @@
     </header>
 
     <main class="main">
-      <!-- Landing: escolher barbearia -->
-      <section id="shopPicker" class="card">
-        <h1 class="title">Marque seu horário</h1>
-        <p class="lead">
-          Use o link da sua barbearia (ex.: <code>/jabarber</code>) ou informe o
-          <strong>shopId</strong> se tiver o código.
+      <!-- Landing: pesquisar e escolher barbearia -->
+      <section id="shopPicker" class="card landing-hero">
+        <p class="landing-kicker">Na Régua · agendamento online</p>
+        <h1 class="title landing-title">Encontre sua barbearia</h1>
+        <p class="lead landing-lead">
+          Pesquise pelo nome e toque na barbearia para ver horários e marcar — sem
+          instalar nada.
         </p>
-        <label class="field">
-          <span class="field-label">Código da barbearia (shopId)</span>
+        <label class="field landing-search-wrap">
+          <span class="field-label">Pesquisar</span>
           <input
-            id="shopIdInput"
-            type="text"
+            type="search"
+            id="shopSearch"
             autocomplete="off"
-            placeholder="Cole o ID do Firestore"
+            placeholder="Digite parte do nome…"
+            enterkeyhint="search"
           />
         </label>
-        <div class="row">
-          <button type="button" id="loadShopBtn" class="btn btn-filled">Continuar</button>
+        <div id="shopDirectoryLoading" class="landing-loading muted">
+          Carregando barbearias…
         </div>
-        <p class="hint">
-          Exemplo de link: <code>…netlify.app/jabarber</code> (igual ao
-          <code>nameLowercase</code> no Firestore, ou campo <code>slug</code>).
+        <div id="shopDirectoryList" class="shop-directory-list" hidden></div>
+        <p id="shopDirectoryEmpty" class="landing-empty muted" hidden>
+          Nenhuma barbearia encontrada com esse termo.
         </p>
+
+        <details class="landing-advanced">
+          <summary class="landing-advanced-summary">
+            Sou da equipe — entrar com o código da barbearia
+          </summary>
+          <p class="hint landing-advanced-hint">
+            Uso interno: cole o ID do Firestore se a barbearia ainda não aparece na
+            lista.
+          </p>
+          <label class="field">
+            <span class="field-label">Código (shopId)</span>
+            <input
+              id="shopIdInput"
+              type="text"
+              autocomplete="off"
+              placeholder="ID do documento no Firestore"
+            />
+          </label>
+          <div class="row">
+            <button type="button" id="loadShopBtn" class="btn btn-filled">
+              Entrar
+            </button>
+          </div>
+        </details>
+
         <div id="pickerStatus" class="msg" role="status" aria-live="polite"></div>
       </section>
 
