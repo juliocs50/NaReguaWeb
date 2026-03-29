@@ -52,7 +52,16 @@ function humanizeApiError(status, bodyText) {
 }
 
 async function fetchJson(url, options = {}) {
-  const res = await fetch(url, options);
+  let res;
+  try {
+    res = await fetch(url, options);
+  } catch (e) {
+    const msg =
+      e && (e.message === "Failed to fetch" || String(e.name) === "TypeError")
+        ? "Sem ligação à API. No Netlify use o endereço /api (mesmo site), confira netlify.toml e faça deploy. Se a função estiver nova, faça firebase deploy --only functions e permita invocação pública (IAM)."
+        : (e && e.message) || "Erro de rede.";
+    throw new Error(msg);
+  }
   const text = await res.text().catch(() => "");
 
   if (!res.ok) {

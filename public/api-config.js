@@ -1,7 +1,7 @@
 /**
- * Mesmo projeto Firebase que o app Android (google-services.json → project_id: naregua-61564).
- * URL da Cloud Function `naReguaWebApi` (região southamerica-east1, igual ao código em functions/).
+ * Deixe vazio (padrão) para usar **/api** no mesmo domínio do Netlify.
+ * O netlify.toml faz proxy para a Cloud Function → o browser não faz pedido cross-origin → **sem erro CORS** (“Failed to fetch”).
+ *
+ * Só preencha com URL direta da Function se precisares e souberes que a função aceita o teu domínio em CORS.
  */
-window.NA_REGUA_API_BASE =
-  window.NA_REGUA_API_BASE ||
-  "https://southamerica-east1-naregua-61564.cloudfunctions.net/naReguaWebApi";
+window.NA_REGUA_API_BASE = window.NA_REGUA_API_BASE || "";
