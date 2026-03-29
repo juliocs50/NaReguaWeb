@@ -322,21 +322,30 @@ async function book() {
     .collection("appointments");
 
   try {
+    // Query não pode ir dentro de runTransaction no SDK compat — só DocumentReference.
+    const daySnap = await appointmentsCol
+      .where("dateKey", "==", dateKey)
+      .get();
+    daySnap.docs.forEach(function (doc) {
+      const d = doc.data();
+      if (
+        d.barberId === barberId &&
+        d.timeLabel === timeLabel &&
+        (d.status || "SCHEDULED") !== "CANCELLED"
+      ) {
+        throw new Error("Esse horário já foi ocupado.");
+      }
+    });
+
+    const ref = appointmentsCol.doc(appointmentId);
     await db.runTransaction(async function (transaction) {
-      const daySnap = await transaction.get(
-        appointmentsCol.where("dateKey", "==", dateKey)
-      );
-      daySnap.docs.forEach(function (doc) {
-        const d = doc.data();
-        if (
-          d.barberId === barberId &&
-          d.timeLabel === timeLabel &&
-          (d.status || "SCHEDULED") !== "CANCELLED"
-        ) {
+      const existing = await transaction.get(ref);
+      if (existing.exists) {
+        const st = existing.data().status || "SCHEDULED";
+        if (st !== "CANCELLED") {
           throw new Error("Esse horário já foi ocupado.");
         }
-      });
-      const ref = appointmentsCol.doc(appointmentId);
+      }
       transaction.set(ref, {
         shopId: shopId,
         barberId: barberId,
