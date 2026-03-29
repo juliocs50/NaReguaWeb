@@ -84,9 +84,139 @@
     });
   }
 
+  /** Todos os slots base do dia (para grade da agenda). */
+  function generateBaseSlotLabelsForDay(scheduleByDay, dateKey) {
+    const dow = javaDayOfWeekFromDateKey(dateKey);
+    const daySchedule = scheduleByDay[dow];
+    if (!daySchedule || !daySchedule.isWorking) return [];
+    return generateBaseSlotLabels(daySchedule);
+  }
+
+  function appointmentRowFromDoc(a) {
+    const st = a.status || "SCHEDULED";
+    const base = {
+      timeLabel: a.timeLabel,
+      serviceName: a.serviceName || "",
+    };
+    if (st === "DONE") {
+      return Object.assign({}, base, {
+        state: "done",
+        clientName: a.clientName || "—",
+        clientPhone: a.clientPhone || "",
+      });
+    }
+    if (st === "IN_PROGRESS") {
+      return Object.assign({}, base, {
+        state: "in_progress",
+        clientName: a.clientName || "—",
+        clientPhone: a.clientPhone || "",
+      });
+    }
+    return Object.assign({}, base, {
+      state: "scheduled",
+      clientName: a.clientName || "—",
+      clientPhone: a.clientPhone || "",
+    });
+  }
+
+  /**
+   * Grade completa do dia: horários de atendimento (livre/ocupado/finalizado),
+   * bloco de almoço (pausa — não aparecia antes) e marcações em horários fora da grade.
+   */
+  function buildDayAgendaList(scheduleByDay, dateKey, appointmentsForBarber) {
+    const dow = javaDayOfWeekFromDateKey(dateKey);
+    const day = scheduleByDay[dow];
+    if (!day || !day.isWorking) return [];
+
+    var lunchStart = day.lunchStart ? parseMinutes(day.lunchStart) : null;
+    var lunchEnd = day.lunchEnd ? parseMinutes(day.lunchEnd) : null;
+    if (
+      lunchStart == null ||
+      lunchEnd == null ||
+      lunchStart >= lunchEnd
+    ) {
+      lunchStart = null;
+      lunchEnd = null;
+    }
+
+    const active = appointmentsForBarber.filter(function (a) {
+      return (a.status || "SCHEDULED") !== "CANCELLED";
+    });
+
+    const byTime = {};
+    active.forEach(function (a) {
+      if (a.timeLabel) byTime[a.timeLabel] = a;
+    });
+
+    const start = parseMinutes(day.startTime);
+    const end = parseMinutes(day.endTime);
+    if (start == null || end == null) return [];
+    const step = Math.max(5, day.intervalMinutes || 30);
+
+    function inLunch(t) {
+      return lunchStart != null && lunchEnd != null && t >= lunchStart && t < lunchEnd;
+    }
+
+    const coveredSlotLabels = {};
+    const items = [];
+
+    let t = start;
+    while (t < end) {
+      if (inLunch(t)) {
+        const rangeLabel =
+          formatMinutes(lunchStart) + " – " + formatMinutes(lunchEnd);
+        items.push({
+          sortKey: lunchStart,
+          row: {
+            timeLabel: rangeLabel,
+            state: "lunch",
+            lunchSubtitle: "Pausa / indisponível para marcação",
+          },
+        });
+        t = lunchEnd;
+        continue;
+      }
+      if (t + step > end) break;
+      const label = formatMinutes(t);
+      coveredSlotLabels[label] = true;
+      const a = byTime[label];
+      if (!a) {
+        items.push({
+          sortKey: parseMinutes(label) || 0,
+          row: { timeLabel: label, state: "free" },
+        });
+      } else {
+        items.push({
+          sortKey: parseMinutes(label) || 0,
+          row: appointmentRowFromDoc(a),
+        });
+      }
+      t += step;
+    }
+
+    active.forEach(function (a) {
+      if (!a.timeLabel) return;
+      if (coveredSlotLabels[a.timeLabel]) return;
+      const sk = parseMinutes(a.timeLabel);
+      items.push({
+        sortKey: sk != null ? sk : 99999,
+        row: appointmentRowFromDoc(a),
+      });
+    });
+
+    items.sort(function (a, b) {
+      return a.sortKey - b.sortKey;
+    });
+    return items.map(function (x) {
+      return x.row;
+    });
+  }
+
   window.NaReguaSchedule = {
     parseScheduleFromFirestore: parseScheduleFromFirestore,
     availableSlotLabels: availableSlotLabels,
     javaDayOfWeekFromDateKey: javaDayOfWeekFromDateKey,
+    generateBaseSlotLabelsForDay: generateBaseSlotLabelsForDay,
+    buildDayAgendaList: buildDayAgendaList,
   };
 })();

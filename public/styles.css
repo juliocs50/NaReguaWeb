@@ -119,6 +119,134 @@ body {
   font-weight: 600;
 }
 
+.agenda-hint {
+  margin: 0 0 12px;
+  font-size: 0.88rem;
+}
+
+.day-agenda-host {
+  min-height: 2rem;
+}
+
+.day-agenda-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.day-agenda-row {
+  display: grid;
+  grid-template-columns: minmax(88px, auto) 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--md-sys-color-surface-container-high);
+  border: 1px solid rgba(102, 80, 164, 0.1);
+}
+
+.day-agenda-row.is-free {
+  opacity: 0.85;
+}
+
+.day-agenda-row.is-scheduled {
+  border-color: rgba(102, 80, 164, 0.35);
+}
+
+.day-agenda-row.is-progress {
+  border-color: rgba(25, 118, 210, 0.45);
+  background: rgba(25, 118, 210, 0.06);
+}
+
+.day-agenda-row.is-done {
+  border-color: rgba(27, 94, 32, 0.35);
+  background: rgba(27, 94, 32, 0.06);
+}
+
+.day-agenda-row.is-lunch {
+  border-color: rgba(121, 116, 126, 0.45);
+  background: rgba(121, 116, 126, 0.1);
+}
+
+.agenda-badge-lunch {
+  background: rgba(121, 116, 126, 0.25);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.day-agenda-lunch-sub {
+  display: block;
+  width: 100%;
+  font-size: 0.85rem;
+  color: var(--md-sys-color-on-surface-variant);
+  line-height: 1.35;
+}
+
+.day-agenda-service {
+  flex: 1 1 100%;
+  font-size: 0.82rem;
+  color: var(--md-sys-color-on-surface-variant);
+  font-weight: 500;
+}
+
+.day-agenda-time {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--md-sys-color-primary);
+}
+
+.day-agenda-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.agenda-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+
+.agenda-badge-free {
+  background: rgba(121, 116, 126, 0.2);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.agenda-badge-scheduled {
+  background: rgba(102, 80, 164, 0.2);
+  color: var(--md-sys-color-primary);
+}
+
+.agenda-badge-progress {
+  background: rgba(25, 118, 210, 0.2);
+  color: #1565c0;
+}
+
+.agenda-badge-done {
+  background: rgba(27, 94, 32, 0.2);
+  color: var(--ok);
+}
+
+.day-agenda-name {
+  font-weight: 500;
+  flex: 1;
+  min-width: 120px;
+}
+
+.day-agenda-phone {
+  font-size: 0.88rem;
+  color: var(--md-sys-color-primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.day-agenda-phone:hover {
+  text-decoration: underline;
+}
+
 .muted {
   margin: 0;
   color: var(--md-sys-color-on-surface-variant);

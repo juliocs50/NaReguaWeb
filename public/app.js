@@ -63,6 +63,14 @@ function priceToBRL(cents) {
   });
 }
 
+/** Mesmo critério do app Android — evita dois agendamentos com o mesmo nome no dia. */
+function normalizeClientName(s) {
+  return String(s)
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
 function showShopHeader(name) {
   const badge = $("shopBadge");
   if (!badge) return;
@@ -154,7 +162,7 @@ async function loadServices(shopId) {
   });
 }
 
-async function appointmentsForDay(shopId, dateKey) {
+async function appointmentsForDayDetailed(shopId, dateKey) {
   const snap = await db
     .collection("barbershops")
     .doc(shopId)
@@ -168,8 +176,131 @@ async function appointmentsForDay(shopId, dateKey) {
       barberId: x.barberId || "",
       timeLabel: x.timeLabel || "",
       status: x.status || "SCHEDULED",
+      clientName: x.clientName || "",
+      clientPhone: x.clientPhone || "",
+      serviceName: x.serviceName || "",
     };
   });
+}
+
+function renderDayAgenda(barber, dateKey, appointmentsForBarber) {
+  const host = $("dayAgenda");
+  if (!host || !window.NaReguaSchedule.buildDayAgendaList) return;
+  const rows = window.NaReguaSchedule.buildDayAgendaList(
+    barber.scheduleByDay,
+    dateKey,
+    appointmentsForBarber
+  );
+  host.innerHTML = "";
+  if (!rows.length) {
+    host.innerHTML =
+      '<p class="muted">Sem grade neste dia (folga ou sem horários cadastrados).</p>';
+    return;
+  }
+  const list = document.createElement("div");
+  list.className = "day-agenda-list";
+  rows.forEach(function (r) {
+    const row = document.createElement("div");
+    row.className = "day-agenda-row";
+    const time = document.createElement("span");
+    time.className = "day-agenda-time";
+    time.textContent = r.timeLabel;
+    const body = document.createElement("div");
+    body.className = "day-agenda-body";
+    if (r.state === "lunch") {
+      row.classList.add("is-lunch");
+      const badge = document.createElement("span");
+      badge.className = "agenda-badge agenda-badge-lunch";
+      badge.textContent = "Almoço";
+      body.appendChild(badge);
+      const sub = document.createElement("span");
+      sub.className = "day-agenda-lunch-sub";
+      sub.textContent = r.lunchSubtitle || "Pausa — sem atendimentos neste intervalo";
+      body.appendChild(sub);
+    } else if (r.state === "free") {
+      row.classList.add("is-free");
+      const badge = document.createElement("span");
+      badge.className = "agenda-badge agenda-badge-free";
+      badge.textContent = "Livre";
+      body.appendChild(badge);
+    } else if (r.state === "done") {
+      row.classList.add("is-done");
+      const badge = document.createElement("span");
+      badge.className = "agenda-badge agenda-badge-done";
+      badge.textContent = "Finalizado";
+      const name = document.createElement("span");
+      name.className = "day-agenda-name";
+      name.textContent = r.clientName;
+      body.appendChild(badge);
+      body.appendChild(name);
+      if (r.serviceName) {
+        const svc = document.createElement("span");
+        svc.className = "day-agenda-service";
+        svc.textContent = r.serviceName;
+        body.appendChild(svc);
+      }
+      if (r.clientPhone) {
+        const tel = document.createElement("a");
+        tel.className = "day-agenda-phone";
+        tel.href =
+          "tel:" + String(r.clientPhone).replace(/[^\d+]/g, "");
+        tel.textContent = r.clientPhone;
+        body.appendChild(tel);
+      }
+    } else if (r.state === "in_progress") {
+      row.classList.add("is-progress");
+      const badge = document.createElement("span");
+      badge.className = "agenda-badge agenda-badge-progress";
+      badge.textContent = "Em atendimento";
+      const name = document.createElement("span");
+      name.className = "day-agenda-name";
+      name.textContent = r.clientName;
+      body.appendChild(badge);
+      body.appendChild(name);
+      if (r.serviceName) {
+        const svc = document.createElement("span");
+        svc.className = "day-agenda-service";
+        svc.textContent = r.serviceName;
+        body.appendChild(svc);
+      }
+      if (r.clientPhone) {
+        const tel = document.createElement("a");
+        tel.className = "day-agenda-phone";
+        tel.href =
+          "tel:" + String(r.clientPhone).replace(/[^\d+]/g, "");
+        tel.textContent = r.clientPhone;
+        body.appendChild(tel);
+      }
+    } else {
+      row.classList.add("is-scheduled");
+      const badge = document.createElement("span");
+      badge.className = "agenda-badge agenda-badge-scheduled";
+      badge.textContent = "Agendado";
+      const name = document.createElement("span");
+      name.className = "day-agenda-name";
+      name.textContent = r.clientName;
+      body.appendChild(badge);
+      body.appendChild(name);
+      if (r.serviceName) {
+        const svc = document.createElement("span");
+        svc.className = "day-agenda-service";
+        svc.textContent = r.serviceName;
+        body.appendChild(svc);
+      }
+      if (r.clientPhone) {
+        const tel = document.createElement("a");
+        tel.className = "day-agenda-phone";
+        tel.href =
+          "tel:" + String(r.clientPhone).replace(/[^\d+]/g, "");
+        tel.textContent = r.clientPhone;
+        body.appendChild(tel);
+      }
+    }
+    row.appendChild(time);
+    row.appendChild(body);
+    list.appendChild(row);
+  });
+  host.appendChild(list);
 }
 
 async function resolveAndLoad(slug) {
@@ -232,13 +363,18 @@ async function loadAvailability() {
       return;
     }
 
-    const appts = await appointmentsForDay(shopId, dateKey);
+    const appts = await appointmentsForDayDetailed(shopId, dateKey);
     const taken = new Set();
     appts.forEach(function (a) {
       if (a.barberId === barberId && a.status !== "CANCELLED") {
         taken.add(a.timeLabel);
       }
     });
+
+    const forBarber = appts.filter(function (a) {
+      return a.barberId === barberId && a.status !== "CANCELLED";
+    });
+    renderDayAgenda(barber, dateKey, forBarber);
 
     const slots = window.NaReguaSchedule.availableSlotLabels(
       barber.scheduleByDay,
@@ -326,14 +462,17 @@ async function book() {
     const daySnap = await appointmentsCol
       .where("dateKey", "==", dateKey)
       .get();
+    const wantName = normalizeClientName(clientName);
     daySnap.docs.forEach(function (doc) {
       const d = doc.data();
-      if (
-        d.barberId === barberId &&
-        d.timeLabel === timeLabel &&
-        (d.status || "SCHEDULED") !== "CANCELLED"
-      ) {
+      const st = d.status || "SCHEDULED";
+      if (st === "CANCELLED") return;
+      if (d.barberId === barberId && d.timeLabel === timeLabel) {
         throw new Error("Esse horário já foi ocupado.");
+      }
+      const other = normalizeClientName(d.clientName || "");
+      if (wantName && other && wantName === other) {
+        throw new Error("Já existe um agendamento com este nome neste dia.");
       }
     });
 
