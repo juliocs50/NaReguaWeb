@@ -9,6 +9,12 @@ const $ = (id) => document.getElementById(id);
 
 const APP_FEE_CENTS = 100;
 
+/**
+ * Slot vazio depois do horário atual — não usar "Livre".
+ * Alternativas boas: "Horário passado", "Indisponível", "Expirado", "Encerrado".
+ */
+const LABEL_FREE_SLOT_PAST = "Horário encerrado";
+
 let db = null;
 
 function toDateKey(date = new Date()) {
@@ -189,7 +195,8 @@ function renderDayAgenda(barber, dateKey, appointmentsForBarber) {
   const rows = window.NaReguaSchedule.buildDayAgendaList(
     barber.scheduleByDay,
     dateKey,
-    appointmentsForBarber
+    appointmentsForBarber,
+    new Date()
   );
   host.innerHTML = "";
   if (!rows.length) {
@@ -217,6 +224,12 @@ function renderDayAgenda(barber, dateKey, appointmentsForBarber) {
       sub.className = "day-agenda-lunch-sub";
       sub.textContent = r.lunchSubtitle || "Pausa — sem atendimentos neste intervalo";
       body.appendChild(sub);
+    } else if (r.state === "past") {
+      row.classList.add("is-past");
+      const badge = document.createElement("span");
+      badge.className = "agenda-badge agenda-badge-past";
+      badge.textContent = LABEL_FREE_SLOT_PAST;
+      body.appendChild(badge);
     } else if (r.state === "free") {
       row.classList.add("is-free");
       const badge = document.createElement("span");
@@ -281,6 +294,12 @@ function renderDayAgenda(barber, dateKey, appointmentsForBarber) {
       name.textContent = r.clientName;
       body.appendChild(badge);
       body.appendChild(name);
+      if (r.pastDue) {
+        const hint = document.createElement("span");
+        hint.className = "day-agenda-past-hint";
+        hint.textContent = "Horário já passou";
+        body.appendChild(hint);
+      }
       if (r.serviceName) {
         const svc = document.createElement("span");
         svc.className = "day-agenda-service";
@@ -376,19 +395,29 @@ async function loadAvailability() {
     });
     renderDayAgenda(barber, dateKey, forBarber);
 
-    const slots = window.NaReguaSchedule.availableSlotLabels(
+    const rawSlots = window.NaReguaSchedule.availableSlotLabels(
       barber.scheduleByDay,
       dateKey,
       taken
     );
+    const now = new Date();
+    let slots = rawSlots.filter(function (t) {
+      return !window.NaReguaSchedule.isSlotLabelPast(dateKey, t, now);
+    });
 
     slotsEl.innerHTML = "";
     window.__selectedTimeLabel = null;
 
     if (!slots.length) {
-      slotsEl.innerHTML =
-        '<p class="muted">Sem horários livres neste dia para este barbeiro.</p>';
-      setStatus("Escolha outra data ou outro barbeiro.");
+      if (rawSlots.length) {
+        slotsEl.innerHTML =
+          '<p class="muted">Os horários deste dia para este barbeiro já passaram. Tente amanhã ou outro dia.</p>';
+        setStatus("Sem horários futuros para marcar neste dia.");
+      } else {
+        slotsEl.innerHTML =
+          '<p class="muted">Sem horários livres neste dia para este barbeiro.</p>';
+        setStatus("Escolha outra data ou outro barbeiro.");
+      }
       return;
     }
 
@@ -434,6 +463,9 @@ async function book() {
   if (!clientPhone) return setStatus("Informe seu telefone.", true);
   if (!service) return setStatus("Selecione um serviço.", true);
   if (!timeLabel) return setStatus("Selecione um horário.", true);
+  if (window.NaReguaSchedule.isSlotLabelPast(dateKey, timeLabel, new Date())) {
+    return setStatus("Este horário já passou. Escolha outro.", true);
+  }
 
   const barber = (window.__barbers || []).find(function (b) {
     return b.id === barberId;

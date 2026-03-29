@@ -149,6 +149,23 @@ body {
   opacity: 0.85;
 }
 
+.day-agenda-row.is-past {
+  opacity: 0.9;
+  border-style: dashed;
+}
+
+.agenda-badge-past {
+  background: rgba(73, 69, 79, 0.18);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.day-agenda-past-hint {
+  flex: 1 1 100%;
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
 .day-agenda-row.is-scheduled {
   border-color: rgba(102, 80, 164, 0.35);
 }

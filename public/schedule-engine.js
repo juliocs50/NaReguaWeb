@@ -92,6 +92,29 @@
     return generateBaseSlotLabels(daySchedule);
   }
 
+  function todayDateKey(now) {
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+
+  /**
+   * Compara data do agendamento (YYYY-MM-DD) com o relógio local do navegador.
+   * Slot "passou" no mesmo dia quando os minutos atuais são maiores que o início do slot.
+   */
+  function isSlotLabelPast(dateKey, timeLabel, now) {
+    now = now || new Date();
+    if (!timeLabel) return false;
+    const today = todayDateKey(now);
+    if (dateKey < today) return true;
+    if (dateKey > today) return false;
+    const sm = parseMinutes(timeLabel);
+    if (sm == null) return false;
+    const nm = now.getHours() * 60 + now.getMinutes();
+    return nm > sm;
+  }
+
   function appointmentRowFromDoc(a) {
     const st = a.status || "SCHEDULED";
     const base = {
@@ -123,7 +146,8 @@
    * Grade completa do dia: horários de atendimento (livre/ocupado/finalizado),
    * bloco de almoço (pausa — não aparecia antes) e marcações em horários fora da grade.
    */
-  function buildDayAgendaList(scheduleByDay, dateKey, appointmentsForBarber) {
+  function buildDayAgendaList(scheduleByDay, dateKey, appointmentsForBarber, now) {
+    now = now || new Date();
     const dow = javaDayOfWeekFromDateKey(dateKey);
     const day = scheduleByDay[dow];
     if (!day || !day.isWorking) return [];
@@ -181,14 +205,22 @@
       coveredSlotLabels[label] = true;
       const a = byTime[label];
       if (!a) {
+        const past = isSlotLabelPast(dateKey, label, now);
         items.push({
           sortKey: parseMinutes(label) || 0,
-          row: { timeLabel: label, state: "free" },
+          row: { timeLabel: label, state: past ? "past" : "free" },
         });
       } else {
+        const row = appointmentRowFromDoc(a);
+        if (
+          row.state === "scheduled" &&
+          isSlotLabelPast(dateKey, label, now)
+        ) {
+          row.pastDue = true;
+        }
         items.push({
           sortKey: parseMinutes(label) || 0,
-          row: appointmentRowFromDoc(a),
+          row: row,
         });
       }
       t += step;
@@ -198,9 +230,16 @@
       if (!a.timeLabel) return;
       if (coveredSlotLabels[a.timeLabel]) return;
       const sk = parseMinutes(a.timeLabel);
+      const row = appointmentRowFromDoc(a);
+      if (
+        row.state === "scheduled" &&
+        isSlotLabelPast(dateKey, a.timeLabel, now)
+      ) {
+        row.pastDue = true;
+      }
       items.push({
         sortKey: sk != null ? sk : 99999,
-        row: appointmentRowFromDoc(a),
+        row: row,
       });
     });
 
@@ -218,5 +257,7 @@
     javaDayOfWeekFromDateKey: javaDayOfWeekFromDateKey,
     generateBaseSlotLabelsForDay: generateBaseSlotLabelsForDay,
     buildDayAgendaList: buildDayAgendaList,
+    isSlotLabelPast: isSlotLabelPast,
+    todayDateKey: todayDateKey,
   };
 })();
