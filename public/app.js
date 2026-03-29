@@ -28,8 +28,8 @@ function humanizeApiError(status, bodyText) {
   if (looksLikeHtml(bodyText)) {
     if (status === 404) {
       return (
-        "A API não foi encontrada (404). No Netlify, abra netlify.toml e substitua SEU_PROJECT_ID pela URL real da função naReguaWebApi, " +
-        "ou edite public/api-config.js com essa URL e faça deploy de novo."
+        "API não encontrada (404). No Firebase Console → Functions, confirme a função naReguaWebApi e a URL. " +
+        "No PC: firebase deploy --only functions. Cole essa URL em public/api-config.js se for diferente."
       );
     }
     return (

@@ -1,0 +1,5 @@
+# Ordem: mais específico primeiro. Proxy da API → Firebase (mesmo URL que api-config.js)
+/api    https://southamerica-east1-naregua-61564.cloudfunctions.net/naReguaWebApi   200
+/api/*  https://southamerica-east1-naregua-61564.cloudfunctions.net/naReguaWebApi   200
+# SPA
+/*      /index.html   200

@@ -45,7 +45,8 @@ Variável opcional no HTML (só se não usar proxy `/api`):
 
 ## Erro 404 / HTML na página
 
-Se aparecer mensagem sobre **API não encontrada (404)** ou texto estranho, o proxy `/api` do Netlify não está a bater na Cloud Function. Corrija **uma** destas opções:
+1. No **Firebase Console → Functions**, confirme que **`naReguaWebApi`** existe e copie a **URL** (se for diferente da de `api-config.js`, substitua lá).
+2. No projeto Android: `firebase deploy --only functions` (plano Blaze).
+3. A função deve permitir invocação pública; o código usa `invoker: "public"` no deploy.
 
-- Em `netlify.toml`, substitua `SEU_PROJECT_ID` pela URL completa copiada no Firebase (Functions → `naReguaWebApi` → URL).
-- Ou edite `public/api-config.js` e defina `window.NA_REGUA_API_BASE = "https://…/naReguaWebApi";` (URL direta, sem depender do proxy).
+Se o Netlify não fizer proxy, `api-config.js` já aponta direto para a Cloud Function (com CORS na função).
