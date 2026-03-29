@@ -1,95 +1,15 @@
 /**
- * API: Cloud Function `naReguaWebApi` via `/api` (Netlify) ou URL em `api-config.js`.
+ * Agendamento direto no Firestore (igual conceito do app Android), com Auth anónima.
+ * Requer: Firebase Console → Authentication → Sign-in method → Anonymous → Enable
+ * Regras: firestore.rules com request.auth != null
  */
-function getApiBase() {
-  const w = typeof window !== "undefined" ? window : undefined;
-  const custom = w?.NA_REGUA_API_BASE;
-  if (typeof custom === "string" && custom.trim().length > 0) {
-    return custom.replace(/\/$/, "");
-  }
-  return "/api";
-}
+/* global firebase */
 
 const $ = (id) => document.getElementById(id);
 
-function looksLikeHtml(s) {
-  if (!s || typeof s !== "string") return false;
-  const t = s.trim().toLowerCase();
-  return (
-    t.startsWith("<!doctype") ||
-    t.startsWith("<html") ||
-    t.includes("<html") ||
-    t.includes("page not found")
-  );
-}
+const APP_FEE_CENTS = 100;
 
-/** Nunca mostrar HTML bruto ao utilizador. */
-function humanizeApiError(status, bodyText) {
-  if (looksLikeHtml(bodyText)) {
-    if (status === 404) {
-      return (
-        "API não encontrada (404). No Firebase Console → Functions, confirme a função naReguaWebApi e a URL. " +
-        "No PC: firebase deploy --only functions. Cole essa URL em public/api-config.js se for diferente."
-      );
-    }
-    return (
-      "O servidor devolveu uma página de erro (HTML). Confirme o proxy /api no Netlify e o deploy das Cloud Functions."
-    );
-  }
-  const raw = (bodyText || "").trim();
-  if (!raw) {
-    if (status === 0) return "Sem ligação à internet.";
-    return `Erro ${status}. Tente novamente.`;
-  }
-  try {
-    const j = JSON.parse(raw);
-    if (j && typeof j.error === "string") return j.error;
-  } catch (_) {
-    /* texto simples */
-  }
-  if (raw.length > 220) return raw.slice(0, 220) + "…";
-  return raw;
-}
-
-async function fetchJson(url, options = {}) {
-  let res;
-  try {
-    res = await fetch(url, options);
-  } catch (e) {
-    const isNet =
-      e &&
-      (e.message === "Failed to fetch" || String(e.name) === "TypeError");
-    const usingDirectGoogle =
-      typeof url === "string" && url.includes("cloudfunctions.net");
-    let msg =
-      (e && e.message) || "Erro de rede.";
-    if (isNet) {
-      msg = usingDirectGoogle
-        ? "Ligação bloqueada (CORS/rede). Deixe api-config.js vazio para usar /api no Netlify, ou faça deploy com _redirects."
-        : "Não foi possível falar com /api. Confirme deploy no Netlify (ficheiros _redirects e netlify.toml) e firebase deploy --only functions.";
-    }
-    throw new Error(msg);
-  }
-  const text = await res.text().catch(() => "");
-
-  if (!res.ok) {
-    throw new Error(humanizeApiError(res.status, text));
-  }
-
-  if (!text || !text.trim()) return {};
-
-  if (looksLikeHtml(text)) {
-    throw new Error(humanizeApiError(200, text));
-  }
-
-  try {
-    return JSON.parse(text);
-  } catch (_) {
-    throw new Error(
-      "Resposta inválida do servidor (não é JSON). Verifique a URL da API em api-config.js ou o netlify.toml."
-    );
-  }
-}
+let db = null;
 
 function toDateKey(date = new Date()) {
   const y = date.getFullYear();
@@ -102,7 +22,6 @@ function getQueryParam(name) {
   return new URL(window.location.href).searchParams.get(name);
 }
 
-/** Primeiro segmento útil: /Ja-Barber → "Ja-Barber" */
 function getSlugFromPath() {
   let path = window.location.pathname || "/";
   if (path.endsWith("/") && path.length > 1) path = path.slice(0, -1);
@@ -158,10 +77,104 @@ function hideShopHeader() {
   badge.textContent = "";
 }
 
-async function resolveAndLoad(slug) {
-  const r = await fetchJson(
-    `${getApiBase()}?action=resolveShop&slug=${encodeURIComponent(slug)}`
+function barberFromDoc(doc) {
+  const data = doc.data();
+  const scheduleByDay = window.NaReguaSchedule.parseScheduleFromFirestore(
+    data.scheduleByDay
   );
+  return { id: doc.id, name: data.name || "", scheduleByDay };
+}
+
+function serviceFromDoc(doc) {
+  const d = doc.data();
+  return {
+    id: doc.id,
+    name: d.name || "",
+    priceCents: Number(d.priceCents),
+    durationMinutes: Number(d.durationMinutes != null ? d.durationMinutes : 30),
+  };
+}
+
+async function ensureFirebase() {
+  if (db) return;
+  if (!window.FIREBASE_CONFIG) {
+    throw new Error("Falta firebase-config.js");
+  }
+  if (!firebase.apps.length) {
+    firebase.initializeApp(window.FIREBASE_CONFIG);
+  }
+  db = firebase.firestore();
+  try {
+    await firebase.auth().signInAnonymously();
+  } catch (e) {
+    throw new Error(
+      "Login anónimo falhou. No Firebase Console → Authentication → Sign-in method, ative «Anónimo»."
+    );
+  }
+}
+
+async function resolveShopSlug(slug) {
+  const raw = decodeURIComponent(slug).trim().toLowerCase();
+  if (!raw) return null;
+  const col = db.collection("barbershops");
+  const attempts = [
+    ["slug", raw],
+    ["nameLowercase", raw],
+    ["nameLowercase", raw.replace(/-/g, " ")],
+  ];
+  for (let i = 0; i < attempts.length; i++) {
+    const field = attempts[i][0];
+    const val = attempts[i][1];
+    const snap = await col.where(field, "==", val).limit(1).get();
+    if (!snap.empty) {
+      const doc = snap.docs[0];
+      return { shopId: doc.id, name: doc.data().name || "" };
+    }
+  }
+  return null;
+}
+
+async function loadBarbers(shopId) {
+  const snap = await db
+    .collection("barbershops")
+    .doc(shopId)
+    .collection("barbers")
+    .get();
+  return snap.docs.map(barberFromDoc);
+}
+
+async function loadServices(shopId) {
+  const snap = await db
+    .collection("barbershops")
+    .doc(shopId)
+    .collection("services")
+    .get();
+  return snap.docs.map(serviceFromDoc).filter(function (s) {
+    return s.name && !isNaN(s.priceCents);
+  });
+}
+
+async function appointmentsForDay(shopId, dateKey) {
+  const snap = await db
+    .collection("barbershops")
+    .doc(shopId)
+    .collection("appointments")
+    .where("dateKey", "==", dateKey)
+    .get();
+  return snap.docs.map(function (doc) {
+    const x = doc.data();
+    return {
+      id: doc.id,
+      barberId: x.barberId || "",
+      timeLabel: x.timeLabel || "",
+      status: x.status || "SCHEDULED",
+    };
+  });
+}
+
+async function resolveAndLoad(slug) {
+  const r = await resolveShopSlug(slug);
+  if (!r) throw new Error("Barbearia não encontrada.");
   window.__shopId = r.shopId;
   window.__shopName = r.name || "";
   $("bookingTitle").textContent = r.name ? `Agendar — ${r.name}` : "Agendar";
@@ -176,14 +189,8 @@ async function resolveAndLoad(slug) {
 }
 
 async function loadData(shopId) {
-  const base = getApiBase();
-  const [barbersRes, servicesRes] = await Promise.all([
-    fetchJson(`${base}?action=barbers&shopId=${encodeURIComponent(shopId)}`),
-    fetchJson(`${base}?action=services&shopId=${encodeURIComponent(shopId)}`),
-  ]);
-
-  const barbers = barbersRes.barbers || [];
-  const services = servicesRes.services || [];
+  const barbers = await loadBarbers(shopId);
+  const services = await loadServices(shopId);
 
   if (!barbers.length) throw new Error("Sem barbeiros cadastrados.");
   if (!services.length) throw new Error("Sem serviços cadastrados.");
@@ -217,34 +224,52 @@ async function loadAvailability() {
   const slotsEl = $("slots");
   try {
     setStatus("Carregando horários...");
-    const res = await fetchJson(
-      `${getApiBase()}?action=availability&shopId=${encodeURIComponent(
-        shopId
-      )}&dateKey=${encodeURIComponent(dateKey)}&barberId=${encodeURIComponent(barberId)}`
+    const barber = (window.__barbers || []).find(function (b) {
+      return b.id === barberId;
+    });
+    if (!barber) {
+      setStatus("Barbeiro inválido.", true);
+      return;
+    }
+
+    const appts = await appointmentsForDay(shopId, dateKey);
+    const taken = new Set();
+    appts.forEach(function (a) {
+      if (a.barberId === barberId && a.status !== "CANCELLED") {
+        taken.add(a.timeLabel);
+      }
+    });
+
+    const slots = window.NaReguaSchedule.availableSlotLabels(
+      barber.scheduleByDay,
+      dateKey,
+      taken
     );
-    const slots = res.slots || [];
 
     slotsEl.innerHTML = "";
     window.__selectedTimeLabel = null;
 
     if (!slots.length) {
-      slotsEl.innerHTML = `<p class="muted">Sem horários livres neste dia para este barbeiro.</p>`;
+      slotsEl.innerHTML =
+        '<p class="muted">Sem horários livres neste dia para este barbeiro.</p>';
       setStatus("Escolha outra data ou outro barbeiro.");
       return;
     }
 
-    for (const t of slots) {
+    slots.forEach(function (t) {
       const btn = document.createElement("button");
       btn.className = "slot";
       btn.type = "button";
       btn.textContent = t;
-      btn.addEventListener("click", () => {
+      btn.addEventListener("click", function () {
         window.__selectedTimeLabel = t;
-        slotsEl.querySelectorAll(".slot").forEach((b) => b.classList.remove("selected"));
+        slotsEl.querySelectorAll(".slot").forEach(function (b) {
+          b.classList.remove("selected");
+        });
         btn.classList.add("selected");
       });
       slotsEl.appendChild(btn);
-    }
+    });
 
     setStatus("Toque em um horário livre.");
   } catch (e) {
@@ -255,7 +280,9 @@ async function loadAvailability() {
 
 function getSelectedService() {
   const serviceId = $("serviceSelect").value;
-  return (window.__services || []).find((s) => s.id === serviceId) || null;
+  return (window.__services || []).find(function (s) {
+    return s.id === serviceId;
+  });
 }
 
 async function book() {
@@ -272,39 +299,82 @@ async function book() {
   if (!service) return setStatus("Selecione um serviço.", true);
   if (!timeLabel) return setStatus("Selecione um horário.", true);
 
-  setStatus("Confirmando agendamento...");
-  const payload = {
-    shopId,
-    barberId,
+  const barber = (window.__barbers || []).find(function (b) {
+    return b.id === barberId;
+  });
+  if (!barber) return setStatus("Barbeiro inválido.", true);
+
+  const baseSlots = window.NaReguaSchedule.availableSlotLabels(
+    barber.scheduleByDay,
     dateKey,
-    timeLabel,
-    clientName,
-    clientPhone,
-    serviceId: service.id,
-  };
+    new Set()
+  );
+  if (baseSlots.indexOf(timeLabel) === -1) {
+    return setStatus("Horário inválido para este barbeiro.", true);
+  }
+
+  setStatus("Confirmando agendamento...");
+
+  const appointmentId = shopId + "_" + barberId + "_" + dateKey + "_" + timeLabel;
+  const appointmentsCol = db
+    .collection("barbershops")
+    .doc(shopId)
+    .collection("appointments");
 
   try {
-    const r = await fetchJson(`${getApiBase()}?action=book`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+    await db.runTransaction(async function (transaction) {
+      const daySnap = await transaction.get(
+        appointmentsCol.where("dateKey", "==", dateKey)
+      );
+      daySnap.docs.forEach(function (doc) {
+        const d = doc.data();
+        if (
+          d.barberId === barberId &&
+          d.timeLabel === timeLabel &&
+          (d.status || "SCHEDULED") !== "CANCELLED"
+        ) {
+          throw new Error("Esse horário já foi ocupado.");
+        }
+      });
+      const ref = appointmentsCol.doc(appointmentId);
+      transaction.set(ref, {
+        shopId: shopId,
+        barberId: barberId,
+        dateKey: dateKey,
+        timeLabel: timeLabel,
+        clientName: clientName,
+        clientPhone: clientPhone,
+        serviceId: service.id,
+        serviceName: service.name,
+        servicePriceCents: service.priceCents,
+        status: "SCHEDULED",
+        createdBy: "CLIENT",
+        appFeeCents: APP_FEE_CENTS,
+      });
     });
 
-    $("slots").querySelectorAll(".slot").forEach((b) => {
+    $("slots").querySelectorAll(".slot").forEach(function (b) {
       b.disabled = true;
     });
-    setStatus(`Agendamento confirmado. Referência: ${r.appointmentId || "-"}.`);
+    setStatus("Agendamento confirmado. Referência: " + appointmentId + ".");
     await loadAvailability();
   } catch (e) {
-    setStatus(e.message || "Não foi possível confirmar. Tente novamente.", true);
+    setStatus(e.message || "Não foi possível confirmar.", true);
   }
 }
 
 async function init() {
+  try {
+    await ensureFirebase();
+  } catch (e) {
+    setPickerStatus(e.message || "Erro ao iniciar Firebase.", true);
+    return;
+  }
+
   const slugFromPath = getSlugFromPath();
   const queryShopId = getQueryParam("shopId");
 
-  $("loadShopBtn").addEventListener("click", async () => {
+  $("loadShopBtn").addEventListener("click", async function () {
     const shopId = $("shopIdInput").value.trim();
     if (!shopId) {
       setPickerStatus("Digite o shopId.", true);
@@ -331,11 +401,12 @@ async function init() {
 
   $("dateKey").addEventListener("change", loadAvailability);
   $("barberSelect").addEventListener("change", loadAvailability);
-  $("bookBtn").addEventListener("click", () => {
-    book().catch((e) => setStatus(e.message || "Erro ao agendar.", true));
+  $("bookBtn").addEventListener("click", function () {
+    book().catch(function (e) {
+      setStatus(e.message || "Erro ao agendar.", true);
+    });
   });
 
-  // /slug → resolve shop
   if (slugFromPath) {
     setPickerStatus("Abrindo barbearia…");
     try {
@@ -343,7 +414,8 @@ async function init() {
       setPickerStatus("");
     } catch (e) {
       setPickerStatus(
-        e.message || "Barbearia não encontrada. Verifique o nome no link ou use o shopId.",
+        e.message ||
+          "Barbearia não encontrada. Verifique o nome no link ou use o shopId.",
         true
       );
       $("shopPicker").hidden = false;
@@ -352,7 +424,6 @@ async function init() {
     return;
   }
 
-  // ?shopId= → carregar direto
   if (queryShopId) {
     $("shopIdInput").value = queryShopId;
     $("loadShopBtn").click();

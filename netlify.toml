@@ -1,20 +1,7 @@
-# Mesmo Firebase que o Android: projeto naregua-61564
-# (proxy /api opcional — o site também usa api-config.js com a URL direta da Function)
+# Site estático em public/ — API é só Firestore no browser (sem proxy /api).
 
 [build]
   publish = "public"
-
-[[redirects]]
-  from = "/api"
-  to = "https://southamerica-east1-naregua-61564.cloudfunctions.net/naReguaWebApi"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/api/*"
-  to = "https://southamerica-east1-naregua-61564.cloudfunctions.net/naReguaWebApi"
-  status = 200
-  force = true
 
 [[redirects]]
   from = "/*"

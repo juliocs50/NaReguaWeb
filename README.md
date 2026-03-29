@@ -1,52 +1,28 @@
 # NaReguaWeb — agendamento para clientes
 
-Site estático focado em **marcar horário** (nome + telefone), alinhado visualmente ao app **Na Régua** (Material / roxo).
+Site estático que fala **direto com o Firestore** (SDK Web), como o app Android: **mesmo projeto** `naregua-61564`, mesmas coleções `barbershops/{id}/barbers`, `services`, `appointments`.
 
-O site usa o **mesmo projeto Firebase** que o Android (`project_id`: **naregua-61564**, ver `app/google-services.json`). As Cloud Functions são as do repositório NaRegua (`functions/`), deploy com `firebase deploy --only functions`.
+**Não é obrigatório usar Cloud Functions** para marcar horário neste site.
 
-## URL amigável por barbearia
+## Firebase Console (uma vez)
 
-Use o **primeiro segmento do caminho** como identificador:
+1. **Authentication** → **Sign-in method** → ativar **Anonymous** (anónimo).  
+   As regras atuais exigem `request.auth != null`; o site faz `signInAnonymously()`.
 
-`https://SEU_SITE.netlify.app/ja-barber`
+2. (Opcional) **Firestore** → regras: as tuas regras já permitem leitura/escrita para qualquer utilizador autenticado (incluindo anónimo).
 
-O backend resolve o slug assim (Firestore, coleção `barbershops`):
+## Ficheiros
 
-1. Campo opcional **`slug`** (ex.: `ja-barber`) — recomendado para URL curta e estável.
-2. Campo **`nameLowercase`** (igual ao app): comparação exata ou com hífens trocados por espaço  
-   (ex.: URL `ja-barber` ↔ `nameLowercase` `ja barber`).
+- `public/firebase-config.js` — `apiKey` / `projectId` alinhados ao Android (`google-services.json`).
+- `public/schedule-engine.js` — geração de slots (igual ao `ScheduleEngine` do app).
+- `public/app.js` — leituras Firestore + transação ao confirmar marcação.
 
-Exemplo: nome da barbearia **JaBarber** → `nameLowercase` costuma ser **`jabarber`** → link:  
-`https://…/jabarber`
+## URL por barbearia
 
-Se quiser um texto com espaços no Firestore, use hífen na URL:  
-`ja barber` → `…/ja-barber`
+`/jabarber` resolve contra `barbershops`: campos opcionais `slug` ou `nameLowercase` (como no backend anterior).
 
-## API (Cloud Function `naReguaWebApi`)
+## Netlify
 
-Após deploy das Functions no Firebase, configure:
+Só precisas de **redirect SPA** (`/*` → `index.html`). O proxy `/api` **já não é necessário** para o agendamento.
 
-- **Netlify:** edite `netlify.toml` e substitua `SEU_PROJECT_ID` pela URL real da função.
-- Ou **Firebase Hosting:** use o `firebase.json` desta pasta (rewrites `/api` + SPA).
-
-Variável opcional no HTML (só se não usar proxy `/api`):
-
-```html
-<script>
-  window.NA_REGUA_API_BASE = "https://southamerica-east1-XXX.cloudfunctions.net/naReguaWebApi";
-</script>
-```
-
-## Deploy
-
-1. `firebase deploy --only functions` (no repositório do app Android, pasta `functions`) para publicar `naReguaWebApi` com `resolveShop`.
-2. Ajustar `netlify.toml` com a URL da função.
-3. Push no Netlify (ou `firebase deploy --only hosting` se usar Firebase Hosting).
-
-## Erro 404 / HTML na página
-
-1. No **Firebase Console → Functions**, confirme que **`naReguaWebApi`** existe e copie a **URL** (se for diferente da de `api-config.js`, substitua lá).
-2. No projeto Android: `firebase deploy --only functions` (plano Blaze).
-3. A função deve permitir invocação pública; o código usa `invoker: "public"` no deploy.
-
-Se o Netlify não fizer proxy, `api-config.js` já aponta direto para a Cloud Function (com CORS na função).
+Deploy: pasta `public/` como site estático.

@@ -8,14 +8,6 @@
     ],
     "rewrites": [
       {
-        "source": "/api",
-        "function": "naReguaWebApi"
-      },
-      {
-        "source": "/api/**",
-        "function": "naReguaWebApi"
-      },
-      {
         "source": "**",
         "destination": "/index.html"
       }
