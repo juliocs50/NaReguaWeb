@@ -168,6 +168,7 @@ async function loadServices(shopId) {
   });
 }
 
+/** Agenda pública: não incluir telefone — só o app do barbeiro exibe. */
 async function appointmentsForDayDetailed(shopId, dateKey) {
   const snap = await db
     .collection("barbershops")
@@ -183,7 +184,6 @@ async function appointmentsForDayDetailed(shopId, dateKey) {
       timeLabel: x.timeLabel || "",
       status: x.status || "SCHEDULED",
       clientName: x.clientName || "",
-      clientPhone: x.clientPhone || "",
       serviceName: x.serviceName || "",
     };
   });
@@ -252,14 +252,6 @@ function renderDayAgenda(barber, dateKey, appointmentsForBarber) {
         svc.textContent = r.serviceName;
         body.appendChild(svc);
       }
-      if (r.clientPhone) {
-        const tel = document.createElement("a");
-        tel.className = "day-agenda-phone";
-        tel.href =
-          "tel:" + String(r.clientPhone).replace(/[^\d+]/g, "");
-        tel.textContent = r.clientPhone;
-        body.appendChild(tel);
-      }
     } else if (r.state === "in_progress") {
       row.classList.add("is-progress");
       const badge = document.createElement("span");
@@ -275,14 +267,6 @@ function renderDayAgenda(barber, dateKey, appointmentsForBarber) {
         svc.className = "day-agenda-service";
         svc.textContent = r.serviceName;
         body.appendChild(svc);
-      }
-      if (r.clientPhone) {
-        const tel = document.createElement("a");
-        tel.className = "day-agenda-phone";
-        tel.href =
-          "tel:" + String(r.clientPhone).replace(/[^\d+]/g, "");
-        tel.textContent = r.clientPhone;
-        body.appendChild(tel);
       }
     } else {
       row.classList.add("is-scheduled");
@@ -305,14 +289,6 @@ function renderDayAgenda(barber, dateKey, appointmentsForBarber) {
         svc.className = "day-agenda-service";
         svc.textContent = r.serviceName;
         body.appendChild(svc);
-      }
-      if (r.clientPhone) {
-        const tel = document.createElement("a");
-        tel.className = "day-agenda-phone";
-        tel.href =
-          "tel:" + String(r.clientPhone).replace(/[^\d+]/g, "");
-        tel.textContent = r.clientPhone;
-        body.appendChild(tel);
       }
     }
     row.appendChild(time);

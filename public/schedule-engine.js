@@ -125,20 +125,17 @@
       return Object.assign({}, base, {
         state: "done",
         clientName: a.clientName || "—",
-        clientPhone: a.clientPhone || "",
       });
     }
     if (st === "IN_PROGRESS") {
       return Object.assign({}, base, {
         state: "in_progress",
         clientName: a.clientName || "—",
-        clientPhone: a.clientPhone || "",
       });
     }
     return Object.assign({}, base, {
       state: "scheduled",
       clientName: a.clientName || "—",
-      clientPhone: a.clientPhone || "",
     });
   }
 

@@ -253,17 +253,6 @@ body {
   min-width: 120px;
 }
 
-.day-agenda-phone {
-  font-size: 0.88rem;
-  color: var(--md-sys-color-primary);
-  text-decoration: none;
-  font-weight: 500;
-}
-
-.day-agenda-phone:hover {
-  text-decoration: underline;
-}
-
 .muted {
   margin: 0;
   color: var(--md-sys-color-on-surface-variant);
@@ -348,6 +337,13 @@ select:focus {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 0 16px;
+}
+
+.phone-privacy-note {
+  grid-column: 1 / -1;
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
 }
 
 .slots {
