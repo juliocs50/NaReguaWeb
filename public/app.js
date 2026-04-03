@@ -167,6 +167,143 @@ async function resolveShopSlug(slug) {
   return null;
 }
 
+/** Segmento de URL público (/slug) a partir do documento Firestore da barbearia. */
+function pathSegmentFromShopData(data) {
+  if (!data) return "";
+  const slug = data.slug != null ? String(data.slug).trim() : "";
+  if (slug) {
+    return slug
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/^\/+|\/+$/g, "");
+  }
+  let nl =
+    (data.nameLowercase && String(data.nameLowercase).trim().toLowerCase()) || "";
+  if (!nl && data.name) nl = String(data.name).toLowerCase().trim();
+  if (!nl) return "";
+  return nl.replace(/\s+/g, "-");
+}
+
+async function searchShopsByNamePrefix(query) {
+  const qRaw = String(query || "")
+    .toLowerCase()
+    .trim();
+  if (qRaw.length < 2) return [];
+  const end = qRaw + "\uf8ff";
+  const snap = await db
+    .collection("barbershops")
+    .where("nameLowercase", ">=", qRaw)
+    .where("nameLowercase", "<=", end)
+    .limit(20)
+    .get();
+  return snap.docs.map(function (doc) {
+    return { id: doc.id, data: doc.data() };
+  });
+}
+
+function setFindShopStatus(msg, isError) {
+  const el = $("findShopStatus");
+  if (!el) return;
+  el.textContent = msg || "";
+  el.classList.toggle("err", !!isError);
+}
+
+async function copyTextToClipboard(text) {
+  if (!text) return false;
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (_e) {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    } catch (_e2) {
+      return false;
+    }
+  }
+}
+
+async function refreshOwnerShopPublicUrl() {
+  window.__ownerShopPublicUrl = "";
+  window.__ownerShopPathSegment = "";
+  const shopId = window.__ownerShopId;
+  if (!shopId || !db) return;
+  try {
+    const doc = await db.collection("barbershops").doc(shopId).get();
+    if (!doc.exists) return;
+    const seg = pathSegmentFromShopData(doc.data());
+    if (!seg) return;
+    window.__ownerShopPathSegment = seg;
+    const base = String(window.location.origin || "").replace(/\/$/, "");
+    window.__ownerShopPublicUrl = base + "/" + encodeURIComponent(seg);
+  } catch (_e) {
+    /* ignore */
+  }
+}
+
+async function runFindShopSearch() {
+  const input = $("findShopQuery");
+  const q = (input && input.value) || "";
+  const qRaw = q.toLowerCase().trim();
+  const resultsEl = $("findShopResults");
+  if (resultsEl) {
+    resultsEl.innerHTML = "";
+    resultsEl.hidden = true;
+  }
+  if (qRaw.length < 2) {
+    setFindShopStatus("Escreva pelo menos 2 letras do nome.", true);
+    return;
+  }
+  setFindShopStatus("A procurar…");
+  try {
+    await ensureAnonymousForPublicBooking();
+    const rows = await searchShopsByNamePrefix(q);
+    if (!resultsEl) return;
+    if (!rows.length) {
+      setFindShopStatus(
+        "Nenhuma barbearia encontrada. Tente outras letras ou peça o link direto à loja."
+      );
+      return;
+    }
+    setFindShopStatus(rows.length + " resultado(s). Toque numa loja para agendar.");
+    const base = String(window.location.origin || "").replace(/\/$/, "");
+    rows.forEach(function (row) {
+      const seg = pathSegmentFromShopData(row.data);
+      const name = row.data.name || "Barbearia";
+      const href = seg ? base + "/" + encodeURIComponent(seg) : "";
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "find-shop-result-btn";
+      const strong = document.createElement("strong");
+      strong.textContent = name;
+      btn.appendChild(strong);
+      if (href) {
+        const span = document.createElement("span");
+        span.className = "find-shop-result-url";
+        span.textContent = href;
+        btn.appendChild(span);
+      }
+      btn.addEventListener("click", function () {
+        if (!href) return;
+        window.location.href = href;
+      });
+      btn.disabled = !href;
+      resultsEl.appendChild(btn);
+    });
+    resultsEl.hidden = false;
+  } catch (e) {
+    setFindShopStatus(e.message || "Erro ao procurar.", true);
+  }
+}
+
 async function loadBarbers(shopId) {
   const snap = await db
     .collection("barbershops")
@@ -902,6 +1039,7 @@ function showOwnerPortalUI() {
   if (t) t.textContent = window.__ownerShopName || "Barbearia";
   hideShopHeader();
   switchOwnerTab("barbers");
+  refreshOwnerShopPublicUrl().catch(function () {});
 }
 
 function switchOwnerTab(name) {
@@ -1520,6 +1658,8 @@ async function ownerLogoutClick() {
   await firebase.auth().signOut();
   window.__ownerShopId = null;
   window.__ownerShopName = null;
+  window.__ownerShopPublicUrl = "";
+  window.__ownerShopPathSegment = "";
   $("ownerPassword").value = "";
   showLandingHome();
   $("loginCard").hidden = true;
@@ -1602,6 +1742,21 @@ async function init() {
     $("findStub").hidden = false;
     $("loginCard").hidden = true;
     setHomeStatus("");
+    setFindShopStatus("");
+    const r = $("findShopResults");
+    if (r) {
+      r.innerHTML = "";
+      r.hidden = true;
+    }
+    const iq = $("findShopQuery");
+    if (iq) iq.value = "";
+    ensureAnonymousForPublicBooking().catch(function (e) {
+      setHomeStatus(
+        e.message ||
+          "Ative «Anónimo» em Firebase Authentication para procurar barbearias.",
+        true
+      );
+    });
   });
   $("ownerLoginCancel").addEventListener("click", function () {
     $("loginCard").hidden = true;
@@ -1609,7 +1764,24 @@ async function init() {
   });
   $("findStubBack").addEventListener("click", function () {
     $("findStub").hidden = true;
+    setFindShopStatus("");
+    const res = $("findShopResults");
+    if (res) {
+      res.innerHTML = "";
+      res.hidden = true;
+    }
+    const iq = $("findShopQuery");
+    if (iq) iq.value = "";
   });
+  const findShopForm = $("findShopForm");
+  if (findShopForm) {
+    findShopForm.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      runFindShopSearch().catch(function (e) {
+        setFindShopStatus(e.message || "Erro", true);
+      });
+    });
+  }
   $("ownerLoginSubmit").addEventListener("click", function () {
     ownerLoginSubmit().catch(function (e) {
       setHomeStatus(e.message || "Erro", true);
@@ -1617,6 +1789,45 @@ async function init() {
   });
   $("ownerLogoutBtn").addEventListener("click", function () {
     ownerLogoutClick().catch(function () {});
+  });
+
+  $("ownerShareLinkBtn").addEventListener("click", function () {
+    (async function () {
+      await refreshOwnerShopPublicUrl();
+      const url = window.__ownerShopPublicUrl;
+      if (!url) {
+        setOwnerStatus("Não foi possível gerar o link. Tente mais tarde.", true);
+        return;
+      }
+      const ok = await copyTextToClipboard(url);
+      setOwnerStatus(
+        ok
+          ? "Link copiado. Cole no site do WhatsApp Business ou envie ao cliente."
+          : "Copie manualmente: " + url
+      );
+    })().catch(function (e) {
+      setOwnerStatus(e.message || "Erro", true);
+    });
+  });
+
+  $("ownerShareWhatsAppBtn").addEventListener("click", function () {
+    (async function () {
+      await refreshOwnerShopPublicUrl();
+      const url = window.__ownerShopPublicUrl;
+      if (!url) {
+        setOwnerStatus("Não foi possível gerar o link.", true);
+        return;
+      }
+      const nome = window.__ownerShopName || "a nossa barbearia";
+      const text = "Agende em " + nome + " pelo link:\n" + url;
+      window.open(
+        "https://wa.me/?text=" + encodeURIComponent(text),
+        "_blank",
+        "noopener,noreferrer"
+      );
+    })().catch(function (e) {
+      setOwnerStatus(e.message || "Erro", true);
+    });
   });
 
   document.querySelectorAll(".owner-tab").forEach(function (btn) {

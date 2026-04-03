@@ -551,6 +551,83 @@ select:focus {
   margin-top: 12px;
 }
 
+.find-shop-intro {
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.find-shop-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  margin-bottom: 8px;
+}
+
+.find-shop-field {
+  flex: 1 1 220px;
+  min-width: 180px;
+  margin-bottom: 0;
+}
+
+.find-shop-submit {
+  flex: 0 0 auto;
+  margin-bottom: 2px;
+}
+
+.find-shop-status {
+  margin: 8px 0 12px;
+  min-height: 1.25em;
+}
+
+.find-shop-status.err {
+  color: var(--danger);
+}
+
+.find-shop-results {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.find-shop-result-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(102, 80, 164, 0.2);
+  background: var(--md-sys-color-surface-container);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.find-shop-result-btn:hover {
+  background: var(--md-sys-color-surface-container-high);
+  border-color: rgba(102, 80, 164, 0.45);
+  box-shadow: 0 2px 8px rgba(102, 80, 164, 0.1);
+}
+
+.find-shop-result-btn strong {
+  font-size: 1rem;
+  color: var(--md-sys-color-on-surface);
+}
+
+.find-shop-result-url {
+  font-size: 0.78rem;
+  color: var(--md-sys-color-on-surface-variant);
+  word-break: break-all;
+}
+
+.find-shop-back {
+  margin-top: 4px;
+}
+
 .owner-portal-head .owner-portal-title-row {
   display: flex;
   flex-wrap: wrap;
@@ -559,8 +636,11 @@ select:focus {
   gap: 12px;
 }
 
-.owner-portal-sub {
-  margin: 8px 0 0;
+.owner-portal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
 
 .owner-nav {
