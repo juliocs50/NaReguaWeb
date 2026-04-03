@@ -160,14 +160,6 @@ body {
   margin-bottom: 0;
 }
 
-.landing-about-foot {
-  margin-top: 14px !important;
-  padding-top: 14px;
-  border-top: 1px solid rgba(102, 80, 164, 0.08);
-  font-size: 0.88rem !important;
-  line-height: 1.5 !important;
-}
-
 .landing-contact-actions {
   margin: 16px 0 12px;
 }
