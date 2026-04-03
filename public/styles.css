@@ -397,6 +397,7 @@ body {
 input[type="text"],
 input[type="tel"],
 input[type="date"],
+input[type="number"],
 select {
   width: 100%;
   padding: 14px 16px;
@@ -585,6 +586,44 @@ select:focus {
   flex-wrap: wrap;
   gap: 10px;
   align-items: flex-end;
+}
+
+.owner-service-form-add .owner-svc-field {
+  flex: 1 1 140px;
+  min-width: 120px;
+  margin-bottom: 0;
+}
+
+.owner-svc-field-narrow {
+  flex: 0 1 140px;
+  max-width: 180px;
+}
+
+.owner-svc-field input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.owner-service-edit-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--md-sys-color-surface-container-high);
+  border: 1px solid rgba(102, 80, 164, 0.1);
+}
+
+.owner-service-edit-row .owner-svc-field {
+  flex: 1 1 140px;
+  min-width: 120px;
+  margin-bottom: 0;
+}
+
+.owner-service-edit-row .owner-svc-save {
+  flex: 0 0 auto;
+  margin-bottom: 2px;
 }
 
 .owner-service-form input {

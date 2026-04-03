@@ -90,14 +90,14 @@
             <button type="button" id="ownerLogoutBtn" class="btn btn-outline btn-sm">Sair</button>
           </div>
           <p class="muted owner-portal-sub">
-            Mesmas funções principais do app: barbeiros, agenda, cardápio e finanças.
+            Mesmas funções principais do app: barbeiros, agenda, serviços e finanças.
           </p>
         </div>
 
         <nav class="owner-nav card" aria-label="Secções do painel">
           <button type="button" class="owner-tab is-active" data-owner-tab="barbers">Barbeiros</button>
           <button type="button" class="owner-tab" data-owner-tab="agenda">Agenda</button>
-          <button type="button" class="owner-tab" data-owner-tab="menu">Cardápio</button>
+          <button type="button" class="owner-tab" data-owner-tab="menu">Serviço</button>
           <button type="button" class="owner-tab" data-owner-tab="finance">Finanças</button>
         </nav>
 
@@ -127,13 +127,22 @@
         </div>
 
         <div id="ownerPanelMenu" class="owner-panel card" data-panel="menu" hidden>
-          <h3 class="subsection-title">Cardápio (serviços)</h3>
+          <h3 class="subsection-title">Serviços</h3>
           <div id="ownerServicesList" class="owner-list"></div>
           <h4 class="owner-form-title">Novo serviço</h4>
-          <form id="ownerAddServiceForm" class="owner-service-form">
-            <input id="ownerSvcName" type="text" placeholder="Nome" required />
-            <input id="ownerSvcPrice" type="number" step="0.01" min="0" placeholder="Preço (R$)" required />
-            <input id="ownerSvcDuration" type="number" min="5" step="5" placeholder="Minutos" value="30" />
+          <form id="ownerAddServiceForm" class="owner-service-form owner-service-form-add">
+            <label class="field owner-svc-field">
+              <span class="field-label">Nome</span>
+              <input id="ownerSvcName" type="text" placeholder="Nome" required />
+            </label>
+            <label class="field owner-svc-field">
+              <span class="field-label">Preço (R$)</span>
+              <input id="ownerSvcPrice" type="number" step="0.01" min="0" placeholder="0,00" required />
+            </label>
+            <label class="field owner-svc-field owner-svc-field-narrow">
+              <span class="field-label">Duração média (min)</span>
+              <input id="ownerSvcDuration" type="number" min="5" step="5" value="30" />
+            </label>
             <button type="submit" class="btn btn-filled">Adicionar</button>
           </form>
         </div>

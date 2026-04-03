@@ -658,16 +658,86 @@ async function loadOwnerMenuPanel() {
     return;
   }
   services.forEach(function (s) {
-    const d = document.createElement("div");
-    d.className = "owner-list-item";
-    d.textContent =
-      s.name +
-      " — " +
-      priceToBRL(s.priceCents) +
-      " · " +
-      s.durationMinutes +
-      " min";
-    listEl.appendChild(d);
+    const row = document.createElement("div");
+    row.className = "owner-service-edit-row";
+
+    const nameLab = document.createElement("label");
+    nameLab.className = "field owner-svc-field";
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "field-label";
+    nameSpan.textContent = "Nome";
+    const nameIn = document.createElement("input");
+    nameIn.type = "text";
+    nameIn.required = true;
+    nameIn.value = s.name;
+    nameLab.appendChild(nameSpan);
+    nameLab.appendChild(nameIn);
+
+    const priceLab = document.createElement("label");
+    priceLab.className = "field owner-svc-field";
+    const priceSpan = document.createElement("span");
+    priceSpan.className = "field-label";
+    priceSpan.textContent = "Preço (R$)";
+    const priceIn = document.createElement("input");
+    priceIn.type = "number";
+    priceIn.step = "0.01";
+    priceIn.min = "0";
+    priceIn.required = true;
+    priceIn.value = (s.priceCents / 100).toFixed(2);
+    priceLab.appendChild(priceSpan);
+    priceLab.appendChild(priceIn);
+
+    const durLab = document.createElement("label");
+    durLab.className = "field owner-svc-field owner-svc-field-narrow";
+    const durSpan = document.createElement("span");
+    durSpan.className = "field-label";
+    durSpan.textContent = "Duração média (min)";
+    const durIn = document.createElement("input");
+    durIn.type = "number";
+    durIn.min = "5";
+    durIn.step = "5";
+    durIn.value = String(s.durationMinutes);
+    durLab.appendChild(durSpan);
+    durLab.appendChild(durIn);
+
+    const saveBtn = document.createElement("button");
+    saveBtn.type = "button";
+    saveBtn.className = "btn btn-filled btn-sm owner-svc-save";
+    saveBtn.textContent = "Salvar";
+
+    saveBtn.addEventListener("click", async function () {
+      const name = nameIn.value.trim();
+      const price = parseFloat(priceIn.value);
+      const dur = parseInt(durIn.value, 10) || 30;
+      if (!name || isNaN(price)) {
+        setOwnerStatus("Preencha nome e preço válidos.", true);
+        return;
+      }
+      const cents = Math.round(price * 100);
+      const durationMinutes = Math.max(5, dur);
+      try {
+        await db
+          .collection("barbershops")
+          .doc(shopId)
+          .collection("services")
+          .doc(s.id)
+          .update({
+            name: name,
+            priceCents: cents,
+            durationMinutes: durationMinutes,
+          });
+        await loadOwnerMenuPanel();
+        setOwnerStatus("Serviço atualizado.");
+      } catch (e) {
+        setOwnerStatus(e.message || "Erro ao salvar.", true);
+      }
+    });
+
+    row.appendChild(nameLab);
+    row.appendChild(priceLab);
+    row.appendChild(durLab);
+    row.appendChild(saveBtn);
+    listEl.appendChild(row);
   });
 }
 
@@ -982,7 +1052,7 @@ async function openOwnerBookModal(shopId, barberId, dateKey, timeLabel, barber) 
   const svcSel = $("ownerModalService");
   svcSel.innerHTML = "";
   if (!services.length) {
-    setOwnerStatus("Cadastre serviços no Cardápio primeiro.", true);
+    setOwnerStatus("Cadastre serviços na secção Serviço primeiro.", true);
     return;
   }
   services.forEach(function (s) {
