@@ -835,6 +835,22 @@ select:focus {
   min-width: 100px;
 }
 
+.owner-agenda-barber-field {
+  margin-bottom: 14px;
+}
+
+.owner-agenda-barber-select {
+  width: 100%;
+  max-width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--md-sys-color-outline);
+  font-family: inherit;
+  font-size: 1rem;
+  background: var(--md-sys-color-surface);
+  cursor: pointer;
+}
+
 .owner-date-field {
   max-width: 220px;
   margin-bottom: 16px;
@@ -845,6 +861,15 @@ select:focus {
   flex-wrap: wrap;
   gap: 16px;
   align-items: flex-start;
+}
+
+.owner-agenda-board--single {
+  flex-direction: column;
+}
+
+.owner-agenda-board--single .owner-agenda-col {
+  max-width: 100%;
+  flex: 1 1 auto;
 }
 
 .owner-agenda-col {

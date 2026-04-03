@@ -201,13 +201,18 @@
         <div id="ownerPanelAgenda" class="owner-panel card" data-panel="agenda" hidden>
           <h3 class="subsection-title">Agenda</h3>
           <p class="muted owner-agenda-hint">
-            Ao lado do nome, <strong>Editar</strong> abre o painel de horários do barbeiro.
+            Escolha o barbeiro para ver só a agenda dele (no telemóvel evita lista longa). Ao lado do nome,
+            <strong>Editar</strong> abre o painel de horários.
           </p>
+          <label class="field owner-agenda-barber-field">
+            <span class="field-label">Barbeiro</span>
+            <select id="ownerAgendaBarberSelect" class="owner-agenda-barber-select" aria-label="Barbeiro da agenda"></select>
+          </label>
           <label class="field owner-date-field">
             <span class="field-label">Data</span>
             <input type="date" id="ownerAgendaDate" />
           </label>
-          <div id="ownerAgendaBoard" class="owner-agenda-board"></div>
+          <div id="ownerAgendaBoard" class="owner-agenda-board owner-agenda-board--single"></div>
         </div>
 
         <div id="ownerPanelMenu" class="owner-panel card" data-panel="menu" hidden>
