@@ -447,6 +447,243 @@ select:focus {
   transform: translateY(0);
 }
 
+.btn-outline {
+  background: transparent;
+  color: var(--md-sys-color-primary);
+  border: 2px solid var(--md-sys-color-primary);
+}
+
+.btn-outline:hover {
+  background: rgba(102, 80, 164, 0.08);
+}
+
+.btn-sm {
+  padding: 8px 18px;
+  font-size: 0.88rem;
+}
+
+.landing-choice-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 24px 0 8px;
+}
+
+.landing-primary-btn {
+  flex: 1 1 200px;
+}
+
+.landing-secondary-btn {
+  flex: 1 1 200px;
+}
+
+.login-card {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(102, 80, 164, 0.15);
+}
+
+.landing-login-actions {
+  margin-top: 8px;
+}
+
+.find-stub {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(102, 80, 164, 0.15);
+}
+
+.find-stub .btn {
+  margin-top: 12px;
+}
+
+.landing-register-hint {
+  margin-top: 24px;
+  margin-bottom: 0;
+}
+
+.owner-portal-head .owner-portal-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.owner-portal-sub {
+  margin: 8px 0 0;
+}
+
+.owner-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px;
+}
+
+.owner-tab {
+  border: 1px solid var(--md-sys-color-outline);
+  background: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.owner-tab:hover {
+  background: var(--md-sys-color-surface-container-high);
+}
+
+.owner-tab.is-active {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border-color: var(--md-sys-color-primary);
+}
+
+.owner-panel {
+  margin-bottom: 16px;
+}
+
+.owner-list {
+  margin: 12px 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.owner-list-item {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--md-sys-color-surface-container-high);
+  border: 1px solid rgba(102, 80, 164, 0.1);
+  font-weight: 500;
+}
+
+.owner-form-title {
+  margin: 16px 0 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.owner-inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.owner-input-grow {
+  flex: 1 1 200px;
+  min-width: 160px;
+}
+
+.owner-service-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.owner-service-form input {
+  flex: 1 1 120px;
+  min-width: 100px;
+}
+
+.owner-date-field {
+  max-width: 220px;
+  margin-bottom: 16px;
+}
+
+.owner-agenda-board {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.owner-agenda-col {
+  flex: 1 1 280px;
+  max-width: 340px;
+  border: 1px solid rgba(102, 80, 164, 0.15);
+  border-radius: 14px;
+  padding: 12px;
+  background: var(--md-sys-color-surface-container);
+}
+
+.owner-agenda-col h4 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+}
+
+.owner-agenda-delay {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.owner-agenda-delay button {
+  font-size: 0.75rem;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--md-sys-color-outline);
+  background: var(--md-sys-color-surface);
+  cursor: pointer;
+}
+
+.owner-slot-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.owner-slot-actions button {
+  font-size: 0.72rem;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--md-sys-color-outline);
+  background: var(--md-sys-color-surface);
+  cursor: pointer;
+}
+
+.owner-slot-actions button.danger {
+  color: var(--danger);
+  border-color: rgba(179, 38, 30, 0.4);
+}
+
+.owner-finance-total {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--md-sys-color-primary);
+  margin: 12px 0 0;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1000;
+}
+
+.modal-overlay[hidden] {
+  display: none !important;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 420px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
 .grid-3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

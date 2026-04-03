@@ -48,8 +48,15 @@ function renderOptions(selectEl, items, getValue, getLabel) {
   }
 }
 
-function setPickerStatus(msg, isError = false) {
-  const el = $("pickerStatus");
+function setHomeStatus(msg, isError = false) {
+  const el = $("homeStatus");
+  if (!el) return;
+  el.textContent = msg || "";
+  el.classList.toggle("err", !!isError);
+}
+
+function setOwnerStatus(msg, isError = false) {
+  const el = $("ownerStatus");
   if (!el) return;
   el.textContent = msg || "";
   el.classList.toggle("err", !!isError);
@@ -109,8 +116,10 @@ function serviceFromDoc(doc) {
   };
 }
 
-async function ensureFirebase() {
-  if (db) return;
+let __firebaseCoreReady = false;
+
+async function initFirebaseCore() {
+  if (__firebaseCoreReady) return;
   if (!window.FIREBASE_CONFIG) {
     throw new Error("Falta firebase-config.js");
   }
@@ -118,12 +127,22 @@ async function ensureFirebase() {
     firebase.initializeApp(window.FIREBASE_CONFIG);
   }
   db = firebase.firestore();
-  try {
-    await firebase.auth().signInAnonymously();
-  } catch (e) {
-    throw new Error(
-      "Login anónimo falhou. No Firebase Console → Authentication → Sign-in method, ative «Anónimo»."
-    );
+  __firebaseCoreReady = true;
+}
+
+/** Cliente em /slug: precisa de sessão (anónima) para ler Firestore. */
+async function ensureAnonymousForPublicBooking() {
+  await initFirebaseCore();
+  const u = firebase.auth().currentUser;
+  if (u && !u.isAnonymous) return;
+  if (!u) {
+    try {
+      await firebase.auth().signInAnonymously();
+    } catch (e) {
+      throw new Error(
+        "Login anónimo falhou. No Firebase Console → Authentication, ative «Anónimo»."
+      );
+    }
   }
 }
 
@@ -146,124 +165,6 @@ async function resolveShopSlug(slug) {
     }
   }
   return null;
-}
-
-/** Segmento de URL público (igual ao slug / nameLowercase no Firestore). */
-function pathSlugFromShopData(d) {
-  const slug = d.slug != null ? String(d.slug).trim() : "";
-  if (slug) return slug.toLowerCase().replace(/\s+/g, "-");
-  const nl = d.nameLowercase != null ? String(d.nameLowercase).trim() : "";
-  if (nl) return nl.toLowerCase().replace(/\s+/g, "-");
-  return "";
-}
-
-async function loadBarbershopDirectory() {
-  const snap = await db.collection("barbershops").limit(400).get();
-  const list = [];
-  snap.docs.forEach(function (doc) {
-    const d = doc.data();
-    const pathSlug = pathSlugFromShopData(d);
-    if (!pathSlug) return;
-    const name = (d.name && String(d.name).trim()) || "Barbearia";
-    list.push({ name: name, pathSlug: pathSlug });
-  });
-  list.sort(function (a, b) {
-    return a.name.localeCompare(b.name, "pt-BR");
-  });
-  return list;
-}
-
-function renderShopDirectoryList(filterRaw) {
-  const container = $("shopDirectoryList");
-  const emptyEl = $("shopDirectoryEmpty");
-  const all = window.__shopDirectory || [];
-  if (!container || !emptyEl) return;
-
-  const q = normalizeClientName(filterRaw || "");
-  const filtered = !q
-    ? all.slice()
-    : all.filter(function (s) {
-        const nameN = normalizeClientName(s.name);
-        const slugN = normalizeClientName(s.pathSlug.replace(/-/g, " "));
-        return (
-          nameN.includes(q) ||
-          slugN.includes(q) ||
-          s.pathSlug.toLowerCase().includes(String(filterRaw).trim().toLowerCase())
-        );
-      });
-
-  container.innerHTML = "";
-  if (!all.length) {
-    emptyEl.hidden = false;
-    emptyEl.textContent =
-      "Nenhuma barbearia com link público encontrada. Quem gere a conta pode usar o código abaixo.";
-    return;
-  }
-  if (!filtered.length) {
-    emptyEl.hidden = false;
-    emptyEl.textContent = "Nenhuma barbearia encontrada com esse termo.";
-    return;
-  }
-  emptyEl.hidden = true;
-
-  filtered.forEach(function (s) {
-    const a = document.createElement("a");
-    a.className = "shop-pick-card";
-    a.href = "/" + encodeURIComponent(s.pathSlug);
-    const main = document.createElement("span");
-    main.className = "shop-pick-main";
-    const title = document.createElement("span");
-    title.className = "shop-pick-name";
-    title.textContent = s.name;
-    const sub = document.createElement("span");
-    sub.className = "shop-pick-url";
-    sub.textContent =
-      window.location.origin.replace(/\/$/, "") + "/" + s.pathSlug;
-    main.appendChild(title);
-    main.appendChild(sub);
-    const arrow = document.createElement("span");
-    arrow.className = "shop-pick-arrow";
-    arrow.setAttribute("aria-hidden", "true");
-    arrow.textContent = "→";
-    a.appendChild(main);
-    a.appendChild(arrow);
-    container.appendChild(a);
-  });
-}
-
-let shopDirectoryLoaded = false;
-
-async function setupLandingDirectory() {
-  const loading = $("shopDirectoryLoading");
-  const listEl = $("shopDirectoryList");
-  const search = $("shopSearch");
-
-  if (shopDirectoryLoaded) {
-    renderShopDirectoryList(search ? search.value : "");
-    if (listEl) listEl.hidden = false;
-    if (loading) loading.hidden = true;
-    return;
-  }
-
-  try {
-    const list = await loadBarbershopDirectory();
-    window.__shopDirectory = list;
-    shopDirectoryLoaded = true;
-    if (loading) {
-      loading.hidden = true;
-    }
-    if (listEl) {
-      listEl.hidden = false;
-    }
-    renderShopDirectoryList(search ? search.value : "");
-  } catch (e) {
-    if (loading) {
-      loading.textContent =
-        e.message || "Não foi possível carregar a lista de barbearias.";
-      loading.classList.add("err");
-    }
-    setPickerStatus(e.message || "Erro ao carregar barbearias.", true);
-  }
 }
 
 async function loadBarbers(shopId) {
@@ -303,6 +204,10 @@ async function appointmentsForDayDetailed(shopId, dateKey) {
       status: x.status || "SCHEDULED",
       clientName: x.clientName || "",
       serviceName: x.serviceName || "",
+      serviceId: x.serviceId || "",
+      servicePriceCents: (x.servicePriceCents != null ? Number(x.servicePriceCents) : 0),
+      appFeeCents: (x.appFeeCents != null ? Number(x.appFeeCents) : 0),
+      createdBy: x.createdBy || "CLIENT",
     };
   });
 }
@@ -426,7 +331,8 @@ async function resolveAndLoad(slug) {
     ? "Escolha data, barbeiro, serviço e horário."
     : "";
   showShopHeader(r.name || "");
-  $("shopPicker").hidden = true;
+  $("homeLanding").hidden = true;
+  $("ownerPortal").hidden = true;
   $("app").hidden = false;
   setStatus("");
   await loadData(r.shopId);
@@ -637,40 +543,707 @@ async function book() {
   }
 }
 
+function escapeHtml(s) {
+  const d = document.createElement("div");
+  d.textContent = s == null ? "" : String(s);
+  return d.innerHTML;
+}
+
+function defaultScheduleByDay() {
+  const w = {
+    isWorking: true,
+    startTime: "09:00",
+    endTime: "18:00",
+    intervalMinutes: 30,
+    lunchStart: "12:00",
+    lunchEnd: "13:00",
+  };
+  const off = {
+    isWorking: false,
+    startTime: "09:00",
+    endTime: "18:00",
+    intervalMinutes: 30,
+    lunchStart: null,
+    lunchEnd: null,
+  };
+  const o = {};
+  for (let day = 1; day <= 5; day++) o[String(day)] = Object.assign({}, w);
+  o["6"] = Object.assign({}, off);
+  o["7"] = Object.assign({}, off);
+  return o;
+}
+
+async function resolveOwnerShop(uid) {
+  const snap = await db
+    .collection("barbershops")
+    .where("ownerUid", "==", uid)
+    .limit(1)
+    .get();
+  if (snap.empty) return null;
+  const doc = snap.docs[0];
+  return { shopId: doc.id, name: doc.data().name || "" };
+}
+
+function showLandingHome() {
+  $("homeLanding").hidden = false;
+  $("ownerPortal").hidden = true;
+  $("app").hidden = true;
+}
+
+function showOwnerPortalUI() {
+  $("homeLanding").hidden = true;
+  $("ownerPortal").hidden = false;
+  $("app").hidden = true;
+  $("loginCard").hidden = true;
+  $("findStub").hidden = true;
+  const t = $("ownerShopTitle");
+  if (t) t.textContent = window.__ownerShopName || "Barbearia";
+  hideShopHeader();
+  switchOwnerTab("barbers");
+}
+
+function switchOwnerTab(name) {
+  document.querySelectorAll(".owner-tab").forEach(function (b) {
+    b.classList.toggle("is-active", b.getAttribute("data-owner-tab") === name);
+  });
+  const map = {
+    barbers: $("ownerPanelBarbers"),
+    agenda: $("ownerPanelAgenda"),
+    menu: $("ownerPanelMenu"),
+    finance: $("ownerPanelFinance"),
+  };
+  Object.keys(map).forEach(function (k) {
+    const el = map[k];
+    if (el) el.hidden = k !== name;
+  });
+  if (name === "barbers") {
+    loadOwnerBarbersPanel().catch(function () {});
+  } else if (name === "agenda") {
+    loadOwnerAgendaPanel().catch(function () {});
+  } else if (name === "menu") {
+    loadOwnerMenuPanel().catch(function () {});
+  } else if (name === "finance") {
+    loadOwnerFinancePanel().catch(function () {});
+  }
+}
+
+async function loadOwnerBarbersPanel() {
+  const shopId = window.__ownerShopId;
+  const listEl = $("ownerBarbersList");
+  if (!shopId || !listEl) return;
+  setOwnerStatus("");
+  const barbers = await loadBarbers(shopId);
+  listEl.innerHTML = "";
+  if (!barbers.length) {
+    listEl.innerHTML = '<p class="muted">Ainda sem barbeiros. Adicione abaixo.</p>';
+    return;
+  }
+  barbers.forEach(function (b) {
+    const d = document.createElement("div");
+    d.className = "owner-list-item";
+    d.textContent = b.name;
+    listEl.appendChild(d);
+  });
+}
+
+async function loadOwnerMenuPanel() {
+  const shopId = window.__ownerShopId;
+  const listEl = $("ownerServicesList");
+  if (!shopId || !listEl) return;
+  const services = await loadServices(shopId);
+  window.__ownerServicesCache = services;
+  listEl.innerHTML = "";
+  if (!services.length) {
+    listEl.innerHTML = '<p class="muted">Sem serviços. Adicione abaixo.</p>';
+    return;
+  }
+  services.forEach(function (s) {
+    const d = document.createElement("div");
+    d.className = "owner-list-item";
+    d.textContent =
+      s.name +
+      " — " +
+      priceToBRL(s.priceCents) +
+      " · " +
+      s.durationMinutes +
+      " min";
+    listEl.appendChild(d);
+  });
+}
+
+async function loadOwnerFinancePanel() {
+  const shopId = window.__ownerShopId;
+  if (!shopId) return;
+  const now = new Date();
+  const y = now.getFullYear();
+  const mo = now.getMonth() + 1;
+  const start = y + "-" + String(mo).padStart(2, "0") + "-01";
+  const lastDay = new Date(y, mo, 0).getDate();
+  const end =
+    y + "-" + String(mo).padStart(2, "0") + "-" + String(lastDay).padStart(2, "0");
+  const snap = await db
+    .collection("barbershops")
+    .doc(shopId)
+    .collection("appointments")
+    .where("dateKey", ">=", start)
+    .where("dateKey", "<=", end)
+    .get();
+  let sum = 0;
+  snap.docs.forEach(function (doc) {
+    const d = doc.data();
+    if ((d.createdBy || "") === "CLIENT" && (d.appFeeCents || 0) > 0) {
+      sum += Number(d.appFeeCents);
+    }
+  });
+  const blurb = $("ownerFinanceBlurb");
+  if (blurb) {
+    blurb.textContent =
+      "Total referente a agendamentos feitos pelo cliente (taxa do app) no mês " +
+      mo +
+      "/" +
+      y +
+      ".";
+  }
+  const tot = $("ownerFinanceTotal");
+  if (tot) tot.textContent = priceToBRL(sum);
+}
+
+async function addOwnerDelayMinutes(shopId, dateKey, barberId, delta) {
+  const docId = dateKey + "_" + barberId;
+  const ref = db
+    .collection("barbershops")
+    .doc(shopId)
+    .collection("barberDayState")
+    .doc(docId);
+  await ref.set(
+    {
+      delayMinutes: firebase.firestore.FieldValue.increment(delta),
+      dateKey: dateKey,
+      barberId: barberId,
+    },
+    { merge: true }
+  );
+}
+
+function appendOwnerSlotActions(body, r, shopId) {
+  const id = r.appointmentId;
+  if (!id) return;
+  const wrap = document.createElement("div");
+  wrap.className = "owner-slot-actions";
+  if (r.state === "scheduled") {
+    const st = document.createElement("button");
+    st.type = "button";
+    st.textContent = "Start";
+    st.addEventListener("click", function () {
+      ownerStartAppointment(shopId, id).catch(function (e) {
+        setOwnerStatus(e.message || "Erro", true);
+      });
+    });
+    wrap.appendChild(st);
+  }
+  if (r.state === "scheduled" || r.state === "in_progress") {
+    const fn = document.createElement("button");
+    fn.type = "button";
+    fn.textContent = "Finalizar";
+    fn.addEventListener("click", function () {
+      ownerFinishAppointment(shopId, id, r).catch(function (e) {
+        setOwnerStatus(e.message || "Erro", true);
+      });
+    });
+    wrap.appendChild(fn);
+    const cx = document.createElement("button");
+    cx.type = "button";
+    cx.className = "danger";
+    cx.textContent = "Cancelar";
+    cx.addEventListener("click", function () {
+      ownerCancelAppointment(shopId, id).catch(function (e) {
+        setOwnerStatus(e.message || "Erro", true);
+      });
+    });
+    wrap.appendChild(cx);
+  }
+  body.appendChild(wrap);
+}
+
+async function ownerStartAppointment(shopId, apptId) {
+  const ref = db
+    .collection("barbershops")
+    .doc(shopId)
+    .collection("appointments")
+    .doc(apptId);
+  await ref.update({
+    status: "IN_PROGRESS",
+    actualStartAtMillis: Date.now(),
+  });
+  await loadOwnerAgendaPanel();
+  setOwnerStatus("");
+}
+
+async function ownerCancelAppointment(shopId, apptId) {
+  if (!confirm("Cancelar este agendamento?")) return;
+  const ref = db
+    .collection("barbershops")
+    .doc(shopId)
+    .collection("appointments")
+    .doc(apptId);
+  await ref.update({ status: "CANCELLED" });
+  await loadOwnerAgendaPanel();
+  setOwnerStatus("Agendamento cancelado.");
+}
+
+async function ownerFinishAppointment(shopId, apptId, r) {
+  const svc = r.servicePriceCents || 0;
+  const fee = r.appFeeCents || 0;
+  const total = svc + fee;
+  const msg =
+    "Total a cobrar: " +
+    priceToBRL(total) +
+    (fee > 0 ? " (inclui taxa app " + priceToBRL(fee) + ")" : "");
+  if (!confirm(msg + "\n\nMarcar atendimento como finalizado?")) return;
+  const ref = db
+    .collection("barbershops")
+    .doc(shopId)
+    .collection("appointments")
+    .doc(apptId);
+  await ref.update({
+    status: "DONE",
+    actualEndAtMillis: Date.now(),
+  });
+  await loadOwnerAgendaPanel();
+  setOwnerStatus("Atendimento finalizado.");
+}
+
+function renderOwnerAgendaRow(rowEl, r, shopId, barberId, dateKey, barber) {
+  rowEl.className = "day-agenda-row";
+  if (r.state === "lunch") rowEl.classList.add("is-lunch");
+  else if (r.state === "past") rowEl.classList.add("is-past");
+  else if (r.state === "free") rowEl.classList.add("is-free");
+  else if (r.state === "done") rowEl.classList.add("is-done");
+  else if (r.state === "in_progress") rowEl.classList.add("is-progress");
+  else if (r.state === "scheduled") rowEl.classList.add("is-scheduled");
+
+  const time = document.createElement("span");
+  time.className = "day-agenda-time";
+  time.textContent = r.timeLabel;
+  const body = document.createElement("div");
+  body.className = "day-agenda-body";
+
+  if (r.state === "lunch") {
+    const b = document.createElement("span");
+    b.className = "agenda-badge agenda-badge-lunch";
+    b.textContent = "Almoço";
+    body.appendChild(b);
+    const sub = document.createElement("span");
+    sub.className = "day-agenda-lunch-sub";
+    sub.textContent = r.lunchSubtitle || "";
+    body.appendChild(sub);
+  } else if (r.state === "past") {
+    const b = document.createElement("span");
+    b.className = "agenda-badge agenda-badge-past";
+    b.textContent = LABEL_FREE_SLOT_PAST;
+    body.appendChild(b);
+  } else if (r.state === "free") {
+    const b = document.createElement("span");
+    b.className = "agenda-badge agenda-badge-free";
+    b.textContent = "Livre";
+    body.appendChild(b);
+    const mb = document.createElement("button");
+    mb.type = "button";
+    mb.textContent = "Marcar (barbeiro)";
+    mb.addEventListener("click", function () {
+      openOwnerBookModal(shopId, barberId, dateKey, r.timeLabel, barber).catch(
+        function (e) {
+          setOwnerStatus(e.message || "Erro", true);
+        }
+      );
+    });
+    body.appendChild(mb);
+  } else {
+    const stLabel =
+      r.state === "done"
+        ? "Finalizado"
+        : r.state === "in_progress"
+          ? "Em atendimento"
+          : "Agendado";
+    const badge = document.createElement("span");
+    badge.className =
+      "agenda-badge agenda-badge-" +
+      (r.state === "done"
+        ? "done"
+        : r.state === "in_progress"
+          ? "progress"
+          : "scheduled");
+    badge.textContent = stLabel;
+    body.appendChild(badge);
+    const name = document.createElement("span");
+    name.className = "day-agenda-name";
+    name.textContent = r.clientName || "—";
+    body.appendChild(name);
+    if (r.pastDue) {
+      const h = document.createElement("span");
+      h.className = "day-agenda-past-hint";
+      h.textContent = "Horário já passou";
+      body.appendChild(h);
+    }
+    if (r.serviceName) {
+      const svc = document.createElement("span");
+      svc.className = "day-agenda-service";
+      svc.textContent = r.serviceName;
+      body.appendChild(svc);
+    }
+    appendOwnerSlotActions(body, r, shopId);
+  }
+
+  rowEl.appendChild(time);
+  rowEl.appendChild(body);
+}
+
+async function loadOwnerAgendaPanel() {
+  const shopId = window.__ownerShopId;
+  const board = $("ownerAgendaBoard");
+  const dateInput = $("ownerAgendaDate");
+  if (!shopId || !board) return;
+  const dateKey = dateInput && dateInput.value ? dateInput.value : toDateKey();
+  if (dateInput) dateInput.value = dateKey;
+  board.innerHTML = "";
+  setOwnerStatus("A carregar agenda…");
+  const barbers = await loadBarbers(shopId);
+  const allAppts = await appointmentsForDayDetailed(shopId, dateKey);
+  if (!barbers.length) {
+    board.innerHTML = '<p class="muted">Cadastre barbeiros primeiro.</p>';
+    setOwnerStatus("");
+    return;
+  }
+  barbers.forEach(function (barber) {
+    const col = document.createElement("div");
+    col.className = "owner-agenda-col";
+    const h4 = document.createElement("h4");
+    h4.textContent = barber.name;
+    col.appendChild(h4);
+    const delayDiv = document.createElement("div");
+    delayDiv.className = "owner-agenda-delay";
+    [5, 10, 20].forEach(function (dm) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = "+" + dm + " min";
+      b.addEventListener("click", function () {
+        addOwnerDelayMinutes(shopId, dateKey, barber.id, dm)
+          .then(function () {
+            return loadOwnerAgendaPanel();
+          })
+          .catch(function (e) {
+            setOwnerStatus(e.message || "Erro", true);
+          });
+      });
+      delayDiv.appendChild(b);
+    });
+    col.appendChild(delayDiv);
+    const forBarber = allAppts.filter(function (a) {
+      return a.barberId === barber.id && (a.status || "SCHEDULED") !== "CANCELLED";
+    });
+    const rows = window.NaReguaSchedule.buildDayAgendaList(
+      barber.scheduleByDay,
+      dateKey,
+      forBarber,
+      new Date()
+    );
+    const listHost = document.createElement("div");
+    listHost.className = "day-agenda-list";
+    rows.forEach(function (r) {
+      const rowEl = document.createElement("div");
+      renderOwnerAgendaRow(rowEl, r, shopId, barber.id, dateKey, barber);
+      listHost.appendChild(rowEl);
+    });
+    col.appendChild(listHost);
+    board.appendChild(col);
+  });
+  setOwnerStatus("");
+}
+
+function closeOwnerBookModal() {
+  const ov = $("ownerModalOverlay");
+  if (ov) ov.hidden = true;
+  window.__ownerBookCtx = null;
+}
+
+async function openOwnerBookModal(shopId, barberId, dateKey, timeLabel, barber) {
+  window.__ownerBookCtx = {
+    shopId: shopId,
+    barberId: barberId,
+    dateKey: dateKey,
+    timeLabel: timeLabel,
+    barber: barber,
+  };
+  let services = window.__ownerServicesCache;
+  if (!services || !services.length) {
+    services = await loadServices(shopId);
+    window.__ownerServicesCache = services;
+  }
+  const svcSel = $("ownerModalService");
+  svcSel.innerHTML = "";
+  if (!services.length) {
+    setOwnerStatus("Cadastre serviços no Cardápio primeiro.", true);
+    return;
+  }
+  services.forEach(function (s) {
+    const opt = document.createElement("option");
+    opt.value = s.id;
+    opt.textContent = s.name + " (" + priceToBRL(s.priceCents) + ")";
+    svcSel.appendChild(opt);
+  });
+  const meta = $("ownerModalMeta");
+  if (meta) {
+    meta.textContent = barber.name + " · " + timeLabel + " · " + dateKey;
+  }
+  $("ownerModalClientName").value = "";
+  $("ownerModalOverlay").hidden = false;
+}
+
+async function confirmOwnerBookModal() {
+  const ctx = window.__ownerBookCtx;
+  if (!ctx) return;
+  const name = $("ownerModalClientName").value.trim();
+  const serviceId = $("ownerModalService").value;
+  const service = (window.__ownerServicesCache || []).find(function (s) {
+    return s.id === serviceId;
+  });
+  if (!name) {
+    setOwnerStatus("Informe o nome do cliente.", true);
+    return;
+  }
+  if (!service) {
+    setOwnerStatus("Selecione um serviço.", true);
+    return;
+  }
+  const shopId = ctx.shopId;
+  const dateKey = ctx.dateKey;
+  const daySnap = await db
+    .collection("barbershops")
+    .doc(shopId)
+    .collection("appointments")
+    .where("dateKey", "==", dateKey)
+    .get();
+  const wantName = normalizeClientName(name);
+  try {
+    daySnap.docs.forEach(function (doc) {
+      const d = doc.data();
+      const st = d.status || "SCHEDULED";
+      if (st === "CANCELLED") return;
+      const other = normalizeClientName(d.clientName || "");
+      if (wantName && other && wantName === other) {
+        throw new Error("Já existe um agendamento com este nome neste dia.");
+      }
+    });
+  } catch (e) {
+    setOwnerStatus(e.message || "Erro", true);
+    return;
+  }
+  const id =
+    typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : String(Date.now()) + Math.random().toString(36).slice(2);
+  try {
+    await db
+      .collection("barbershops")
+      .doc(shopId)
+      .collection("appointments")
+      .doc(id)
+      .set({
+        shopId: shopId,
+        barberId: ctx.barberId,
+        dateKey: dateKey,
+        timeLabel: ctx.timeLabel,
+        clientName: name,
+        serviceId: service.id,
+        serviceName: service.name,
+        servicePriceCents: service.priceCents,
+        status: "SCHEDULED",
+        createdBy: "BARBER",
+        appFeeCents: 0,
+      });
+    closeOwnerBookModal();
+    await loadOwnerAgendaPanel();
+    setOwnerStatus("Horário marcado.");
+  } catch (e) {
+    setOwnerStatus(e.message || "Erro ao marcar.", true);
+  }
+}
+
+async function ownerLoginSubmit() {
+  setHomeStatus("A entrar…");
+  const email = $("ownerEmail").value.trim();
+  const password = $("ownerPassword").value;
+  if (!email || !password) {
+    setHomeStatus("Preencha e-mail e senha.", true);
+    return;
+  }
+  await initFirebaseCore();
+  try {
+    await firebase.auth().signOut();
+    await firebase.auth().signInWithEmailAndPassword(email, password);
+    const uid = firebase.auth().currentUser.uid;
+    const snap = await db
+      .collection("barbershops")
+      .where("ownerUid", "==", uid)
+      .limit(1)
+      .get();
+    if (snap.empty) {
+      await firebase.auth().signOut();
+      throw new Error(
+        "Nenhuma barbearia ligada a esta conta. O cadastro é feito no aplicativo Android."
+      );
+    }
+    const doc = snap.docs[0];
+    window.__ownerShopId = doc.id;
+    window.__ownerShopName = doc.data().name || "";
+    setHomeStatus("");
+    showOwnerPortalUI();
+  } catch (e) {
+    let msg = e.message || "Falha ao entrar.";
+    if (e.code === "auth/wrong-password" || e.code === "auth/user-not-found") {
+      msg = "E-mail ou senha incorretos.";
+    }
+    if (e.code === "auth/invalid-email") {
+      msg = "E-mail inválido.";
+    }
+    setHomeStatus(msg, true);
+  }
+}
+
+async function ownerLogoutClick() {
+  await firebase.auth().signOut();
+  window.__ownerShopId = null;
+  window.__ownerShopName = null;
+  $("ownerPassword").value = "";
+  showLandingHome();
+  $("loginCard").hidden = true;
+  $("findStub").hidden = true;
+  setOwnerStatus("");
+}
+
 async function init() {
   try {
-    await ensureFirebase();
+    await initFirebaseCore();
   } catch (e) {
-    setPickerStatus(e.message || "Erro ao iniciar Firebase.", true);
+    setHomeStatus(e.message || "Erro ao iniciar Firebase.", true);
     return;
   }
 
-  const slugFromPath = getSlugFromPath();
-  const queryShopId = getQueryParam("shopId");
-
-  $("loadShopBtn").addEventListener("click", async function () {
-    const shopId = $("shopIdInput").value.trim();
-    if (!shopId) {
-      setPickerStatus("Digite o shopId.", true);
-      return;
-    }
-    setPickerStatus("Carregando…");
-    window.__shopId = shopId;
+  firebase.auth().onAuthStateChanged(async function (user) {
+    if (getSlugFromPath()) return;
+    if (!user || user.isAnonymous) return;
     try {
-      $("bookingTitle").textContent = "Agendar";
-      $("bookingSubtitle").textContent =
-        "Escolha data, barbeiro, serviço e horário.";
-      $("shopPicker").hidden = true;
-      $("app").hidden = false;
-      hideShopHeader();
-      setStatus("");
-      await loadData(shopId);
-      setPickerStatus("");
+      const r = await resolveOwnerShop(user.uid);
+      if (!r) return;
+      window.__ownerShopId = r.shopId;
+      window.__ownerShopName = r.name;
+      const appEl = $("app");
+      if (appEl && !appEl.hidden) return;
+      const loginOpen = $("loginCard") && !$("loginCard").hidden;
+      if (loginOpen) return;
+      showOwnerPortalUI();
     } catch (e) {
-      $("shopPicker").hidden = false;
-      $("app").hidden = true;
-      setPickerStatus(e.message || "Erro ao carregar.", true);
+      /* ignore */
     }
+  });
+
+  $("btnLoginShop").addEventListener("click", function () {
+    $("loginCard").hidden = false;
+    $("findStub").hidden = true;
+    setHomeStatus("");
+  });
+  $("btnFindShop").addEventListener("click", function () {
+    $("findStub").hidden = false;
+    $("loginCard").hidden = true;
+    setHomeStatus("");
+  });
+  $("ownerLoginCancel").addEventListener("click", function () {
+    $("loginCard").hidden = true;
+    setHomeStatus("");
+  });
+  $("findStubBack").addEventListener("click", function () {
+    $("findStub").hidden = true;
+  });
+  $("ownerLoginSubmit").addEventListener("click", function () {
+    ownerLoginSubmit().catch(function (e) {
+      setHomeStatus(e.message || "Erro", true);
+    });
+  });
+  $("ownerLogoutBtn").addEventListener("click", function () {
+    ownerLogoutClick().catch(function () {});
+  });
+
+  document.querySelectorAll(".owner-tab").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      switchOwnerTab(btn.getAttribute("data-owner-tab"));
+    });
+  });
+
+  $("ownerAddBarberForm").addEventListener("submit", async function (ev) {
+    ev.preventDefault();
+    const shopId = window.__ownerShopId;
+    const name = $("ownerNewBarberName").value.trim();
+    if (!name || !shopId) return;
+    const ref = db
+      .collection("barbershops")
+      .doc(shopId)
+      .collection("barbers")
+      .doc();
+    try {
+      await ref.set({
+        name: name,
+        shopId: shopId,
+        scheduleByDay: defaultScheduleByDay(),
+      });
+      $("ownerNewBarberName").value = "";
+      await loadOwnerBarbersPanel();
+      setOwnerStatus("Barbeiro adicionado.");
+    } catch (e) {
+      setOwnerStatus(e.message || "Erro", true);
+    }
+  });
+
+  $("ownerAddServiceForm").addEventListener("submit", async function (ev) {
+    ev.preventDefault();
+    const shopId = window.__ownerShopId;
+    const name = $("ownerSvcName").value.trim();
+    const price = parseFloat($("ownerSvcPrice").value);
+    const dur = parseInt($("ownerSvcDuration").value, 10) || 30;
+    if (!name || !shopId || isNaN(price)) return;
+    const cents = Math.round(price * 100);
+    try {
+      await db
+        .collection("barbershops")
+        .doc(shopId)
+        .collection("services")
+        .doc()
+        .set({
+          name: name,
+          priceCents: cents,
+          durationMinutes: dur,
+          shopId: shopId,
+        });
+      $("ownerSvcName").value = "";
+      $("ownerSvcPrice").value = "";
+      await loadOwnerMenuPanel();
+      setOwnerStatus("Serviço adicionado.");
+    } catch (e) {
+      setOwnerStatus(e.message || "Erro", true);
+    }
+  });
+
+  $("ownerAgendaDate").addEventListener("change", function () {
+    loadOwnerAgendaPanel().catch(function () {});
+  });
+
+  $("ownerModalCancel").addEventListener("click", closeOwnerBookModal);
+  $("ownerModalConfirm").addEventListener("click", function () {
+    confirmOwnerBookModal().catch(function (e) {
+      setOwnerStatus(e.message || "Erro", true);
+    });
+  });
+  $("ownerModalOverlay").addEventListener("click", function (ev) {
+    if (ev.target === $("ownerModalOverlay")) closeOwnerBookModal();
   });
 
   $("dateKey").addEventListener("change", loadAvailability);
@@ -681,38 +1254,48 @@ async function init() {
     });
   });
 
-  const shopSearch = $("shopSearch");
-  if (shopSearch) {
-    shopSearch.addEventListener("input", function () {
-      renderShopDirectoryList(this.value);
-    });
-  }
+  const slugFromPath = getSlugFromPath();
+  const queryShopId = getQueryParam("shopId");
 
   if (slugFromPath) {
-    setPickerStatus("Abrindo barbearia…");
+    setHomeStatus("A abrir barbearia…");
     try {
+      await ensureAnonymousForPublicBooking();
       await resolveAndLoad(slugFromPath);
-      setPickerStatus("");
+      setHomeStatus("");
     } catch (e) {
-      setPickerStatus(
-        e.message ||
-          "Barbearia não encontrada. Verifique o nome no link ou escolha na lista.",
+      setHomeStatus(
+        e.message || "Barbearia não encontrada. Verifique o link.",
         true
       );
-      $("shopPicker").hidden = false;
+      $("homeLanding").hidden = false;
       $("app").hidden = true;
-      await setupLandingDirectory();
     }
     return;
   }
 
-  if (queryShopId) {
-    $("shopIdInput").value = queryShopId;
-    $("loadShopBtn").click();
+  if (queryShopId && queryShopId.trim()) {
+    try {
+      await ensureAnonymousForPublicBooking();
+      window.__shopId = queryShopId.trim();
+      $("homeLanding").hidden = true;
+      $("ownerPortal").hidden = true;
+      $("app").hidden = false;
+      $("bookingTitle").textContent = "Agendar";
+      $("bookingSubtitle").textContent =
+        "Escolha data, barbeiro, serviço e horário.";
+      hideShopHeader();
+      setStatus("");
+      await loadData(window.__shopId);
+    } catch (e) {
+      setHomeStatus(e.message || "Erro ao carregar.", true);
+      $("homeLanding").hidden = false;
+      $("app").hidden = true;
+    }
     return;
   }
 
-  await setupLandingDirectory();
+  $("homeLanding").hidden = false;
 }
 
 init();

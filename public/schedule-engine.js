@@ -120,6 +120,10 @@
     const base = {
       timeLabel: a.timeLabel,
       serviceName: a.serviceName || "",
+      appointmentId: a.id || a.appointmentId || null,
+      servicePriceCents:
+        a.servicePriceCents != null ? Number(a.servicePriceCents) : 0,
+      appFeeCents: a.appFeeCents != null ? Number(a.appFeeCents) : 0,
     };
     if (st === "DONE") {
       return Object.assign({}, base, {

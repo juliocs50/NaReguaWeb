@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#6650a4" />
-    <title>Na Régua — Agendar</title>
+    <title>Na Régua</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -32,60 +32,122 @@
     </header>
 
     <main class="main">
-      <!-- Landing: pesquisar e escolher barbearia -->
-      <section id="shopPicker" class="card landing-hero">
-        <p class="landing-kicker">Na Régua · agendamento online</p>
-        <h1 class="title landing-title">Encontre sua barbearia</h1>
+      <!-- Página inicial: dono ou cliente -->
+      <section id="homeLanding" class="card landing-hero">
+        <p class="landing-kicker">Na Régua</p>
+        <h1 class="title landing-title">Bem-vindo</h1>
         <p class="lead landing-lead">
-          Pesquise pelo nome e toque na barbearia para ver horários e marcar — sem
-          instalar nada.
+          <strong>Barbearia:</strong> entre com o mesmo e-mail e senha do aplicativo Android. O
+          <strong>cadastro</strong> de novas barbearias continua <strong>só no app</strong>.
         </p>
-        <label class="field landing-search-wrap">
-          <span class="field-label">Pesquisar</span>
-          <input
-            type="search"
-            id="shopSearch"
-            autocomplete="off"
-            placeholder="Digite parte do nome…"
-            enterkeyhint="search"
-          />
-        </label>
-        <div id="shopDirectoryLoading" class="landing-loading muted">
-          Carregando barbearias…
+        <div class="landing-choice-row">
+          <button type="button" id="btnLoginShop" class="btn btn-filled landing-primary-btn">
+            Entrar como barbearia
+          </button>
+          <button type="button" id="btnFindShop" class="btn btn-outline landing-secondary-btn">
+            Encontrar barbearia
+          </button>
         </div>
-        <div id="shopDirectoryList" class="shop-directory-list" hidden></div>
-        <p id="shopDirectoryEmpty" class="landing-empty muted" hidden>
-          Nenhuma barbearia encontrada com esse termo.
-        </p>
 
-        <details class="landing-advanced">
-          <summary class="landing-advanced-summary">
-            Sou da equipe — entrar com o código da barbearia
-          </summary>
-          <p class="hint landing-advanced-hint">
-            Uso interno: cole o ID do Firestore se a barbearia ainda não aparece na
-            lista.
-          </p>
+        <div id="loginCard" class="login-card" hidden>
+          <h2 class="subsection-title">Login da barbearia</h2>
           <label class="field">
-            <span class="field-label">Código (shopId)</span>
-            <input
-              id="shopIdInput"
-              type="text"
-              autocomplete="off"
-              placeholder="ID do documento no Firestore"
-            />
+            <span class="field-label">E-mail</span>
+            <input id="ownerEmail" type="email" autocomplete="username" />
           </label>
-          <div class="row">
-            <button type="button" id="loadShopBtn" class="btn btn-filled">
-              Entrar
-            </button>
+          <label class="field">
+            <span class="field-label">Senha</span>
+            <input id="ownerPassword" type="password" autocomplete="current-password" />
+          </label>
+          <div class="row landing-login-actions">
+            <button type="button" id="ownerLoginSubmit" class="btn btn-filled">Entrar</button>
+            <button type="button" id="ownerLoginCancel" class="btn btn-outline">Voltar</button>
           </div>
-        </details>
+        </div>
 
-        <div id="pickerStatus" class="msg" role="status" aria-live="polite"></div>
+        <div id="findStub" class="find-stub card-inner" hidden>
+          <h2 class="subsection-title">Encontrar barbearia</h2>
+          <p class="muted">
+            Em breve: pesquisa por nome aqui no site. Por agora, use o
+            <strong>link</strong> que a sua barbearia enviar (ex.:
+            <code>deixanaregua.netlify.app/nome-da-barbearia</code>).
+          </p>
+          <button type="button" id="findStubBack" class="btn btn-outline">Voltar</button>
+        </div>
+
+        <p class="hint landing-register-hint">
+          Não tem conta? Cadastre a barbearia no <strong>aplicativo Android Na Régua</strong> —
+          não é possível cadastrar pelo site.
+        </p>
+        <div id="homeStatus" class="msg" role="status" aria-live="polite"></div>
       </section>
 
-      <!-- Fluxo de agendamento -->
+      <!-- Painel do dono (após login) -->
+      <section id="ownerPortal" class="owner-portal" hidden>
+        <div class="card owner-portal-head">
+          <div class="owner-portal-title-row">
+            <h2 class="section-title" id="ownerShopTitle">Barbearia</h2>
+            <button type="button" id="ownerLogoutBtn" class="btn btn-outline btn-sm">Sair</button>
+          </div>
+          <p class="muted owner-portal-sub">
+            Mesmas funções principais do app: barbeiros, agenda, cardápio e finanças.
+          </p>
+        </div>
+
+        <nav class="owner-nav card" aria-label="Secções do painel">
+          <button type="button" class="owner-tab is-active" data-owner-tab="barbers">Barbeiros</button>
+          <button type="button" class="owner-tab" data-owner-tab="agenda">Agenda</button>
+          <button type="button" class="owner-tab" data-owner-tab="menu">Cardápio</button>
+          <button type="button" class="owner-tab" data-owner-tab="finance">Finanças</button>
+        </nav>
+
+        <div id="ownerPanelBarbers" class="owner-panel card" data-panel="barbers">
+          <h3 class="subsection-title">Barbeiros</h3>
+          <div id="ownerBarbersList" class="owner-list"></div>
+          <h4 class="owner-form-title">Adicionar barbeiro</h4>
+          <form id="ownerAddBarberForm" class="owner-inline-form">
+            <input
+              id="ownerNewBarberName"
+              type="text"
+              placeholder="Nome"
+              required
+              class="owner-input-grow"
+            />
+            <button type="submit" class="btn btn-filled">Adicionar</button>
+          </form>
+        </div>
+
+        <div id="ownerPanelAgenda" class="owner-panel card" data-panel="agenda" hidden>
+          <h3 class="subsection-title">Agenda</h3>
+          <label class="field owner-date-field">
+            <span class="field-label">Data</span>
+            <input type="date" id="ownerAgendaDate" />
+          </label>
+          <div id="ownerAgendaBoard" class="owner-agenda-board"></div>
+        </div>
+
+        <div id="ownerPanelMenu" class="owner-panel card" data-panel="menu" hidden>
+          <h3 class="subsection-title">Cardápio (serviços)</h3>
+          <div id="ownerServicesList" class="owner-list"></div>
+          <h4 class="owner-form-title">Novo serviço</h4>
+          <form id="ownerAddServiceForm" class="owner-service-form">
+            <input id="ownerSvcName" type="text" placeholder="Nome" required />
+            <input id="ownerSvcPrice" type="number" step="0.01" min="0" placeholder="Preço (R$)" required />
+            <input id="ownerSvcDuration" type="number" min="5" step="5" placeholder="Minutos" value="30" />
+            <button type="submit" class="btn btn-filled">Adicionar</button>
+          </form>
+        </div>
+
+        <div id="ownerPanelFinance" class="owner-panel card" data-panel="finance" hidden>
+          <h3 class="subsection-title">Finanças — taxa do app</h3>
+          <p class="muted" id="ownerFinanceBlurb"></p>
+          <p class="owner-finance-total" id="ownerFinanceTotal">—</p>
+        </div>
+
+        <div id="ownerStatus" class="msg" role="status"></div>
+      </section>
+
+      <!-- Agendamento cliente (link /slug) -->
       <section id="app" class="booking" hidden>
         <div class="card booking-head">
           <h2 class="section-title" id="bookingTitle">Agendar</h2>
@@ -110,9 +172,8 @@
         <div class="card">
           <h3 class="subsection-title">Agenda do dia (este barbeiro)</h3>
           <p class="muted agenda-hint">
-            Grade completa do expediente: horários livres, marcações de clientes (nome e
-            serviço), atendimento em curso, já finalizados e o intervalo de
-            <strong>almoço</strong> (pausa).
+            Grade completa do expediente: horários livres, marcações de clientes (nome e serviço),
+            atendimento em curso, já finalizados e o intervalo de <strong>almoço</strong> (pausa).
           </p>
           <div id="dayAgenda" class="day-agenda-host"></div>
         </div>
@@ -132,8 +193,7 @@
             <input id="clientPhone" type="tel" autocomplete="tel" placeholder="(DDD) 9XXXX-XXXX" />
           </label>
           <p class="hint phone-privacy-note">
-            Por segurança, o telefone não aparece nesta página; só a barbearia vê no
-            aplicativo.
+            Por segurança, o telefone não aparece nesta página; só a barbearia vê no aplicativo.
           </p>
         </div>
 
@@ -147,6 +207,25 @@
         <div id="status" class="msg" role="status"></div>
       </section>
     </main>
+
+    <div id="ownerModalOverlay" class="modal-overlay" hidden>
+      <div class="modal-card card" role="dialog" aria-modal="true" aria-labelledby="ownerModalTitle">
+        <h3 class="subsection-title" id="ownerModalTitle">Marcar horário</h3>
+        <p class="muted" id="ownerModalMeta"></p>
+        <label class="field">
+          <span class="field-label">Nome do cliente</span>
+          <input id="ownerModalClientName" type="text" autocomplete="name" />
+        </label>
+        <label class="field">
+          <span class="field-label">Serviço</span>
+          <select id="ownerModalService"></select>
+        </label>
+        <div class="row">
+          <button type="button" id="ownerModalConfirm" class="btn btn-filled">Confirmar</button>
+          <button type="button" id="ownerModalCancel" class="btn btn-outline">Cancelar</button>
+        </div>
+      </div>
+    </div>
 
     <footer class="footer">
       <span>Na Régua</span>
