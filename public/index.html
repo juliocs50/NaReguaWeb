@@ -37,8 +37,9 @@
         <p class="landing-kicker">Na Régua</p>
         <h1 class="title landing-title">Bem-vindo</h1>
         <p class="lead landing-lead">
-          <strong>Barbearia:</strong> entre com o mesmo e-mail e senha do aplicativo Android. O
-          <strong>cadastro</strong> de novas barbearias continua <strong>só no app</strong>.
+          Área reservada a <strong>estabelecimentos parceiros</strong> que já utilizam o Na Régua.
+          Inicie sessão para gerir agenda, equipa, serviços e indicadores — com o mesmo nível de
+          segurança da aplicação para Android.
         </p>
         <div class="landing-choice-row">
           <button type="button" id="btnLoginShop" class="btn btn-filled landing-primary-btn">
@@ -75,10 +76,56 @@
           <button type="button" id="findStubBack" class="btn btn-outline">Voltar</button>
         </div>
 
-        <p class="hint landing-register-hint">
-          Não tem conta? Cadastre a barbearia no <strong>aplicativo Android Na Régua</strong> —
-          não é possível cadastrar pelo site.
-        </p>
+        <div class="landing-extra">
+          <section class="landing-block landing-about" aria-labelledby="landing-about-title">
+            <h2 class="landing-block-title" id="landing-about-title">Sobre o Na Régua</h2>
+            <p>
+              O <strong>Na Régua</strong> foi pensado para tornar a ida à barbearia mais
+              organizada: menos espera à toa, menos confusão com horários e mais previsibilidade
+              para clientes e para quem trabalha na loja.
+            </p>
+            <p>
+              <strong>Para quem marca corte ou barba:</strong> pode consultar disponibilidade,
+              escolher profissional e serviço e confirmar o horário — muitas vezes diretamente no
+              telemóvel ou pelo link que a própria barbearia partilha, sem precisar de insistir por
+              chamada no último minuto.
+            </p>
+            <p>
+              <strong>Para a barbearia:</strong> reúne num só lugar a agenda do dia, a equipa, o
+              catálogo de serviços e informação útil para acompanhar o movimento. O objetivo é
+              descomplicar o dia a dia da equipa e melhorar a experiência de quem entra pela porta.
+            </p>
+            <p class="landing-about-foot muted">
+              A aplicação <strong>Android</strong> complementa esta experiência — por exemplo na
+              primeira configuração da conta e em notificações — enquanto este site permite aceder
+              à gestão com comodidade em computador ou tablet.
+            </p>
+          </section>
+
+          <section class="landing-block landing-contact" aria-labelledby="landing-contact-title">
+            <h2 class="landing-block-title" id="landing-contact-title">Entre em contato</h2>
+            <p>
+              Quer <strong>solicitar o cadastro</strong> da sua barbearia na plataforma ou tirar
+              dúvidas sobre parcerias? Envie-nos um pedido com os seus dados. A nossa equipa analisa
+              e responde o quanto antes.
+            </p>
+            <div class="landing-contact-actions">
+              <a
+                id="contactCadastroLink"
+                class="btn btn-filled landing-contact-btn"
+                href="#"
+                >Enviar pedido por e-mail</a
+              >
+            </div>
+            <p class="hint landing-contact-hint">
+              Ao clicar, abre-se o seu programa de correio com <strong>assunto e texto sugeridos</strong>.
+              Preencha o campo «Para» com o endereço que lhe tiver sido indicado ou peça o contacto
+              comercial através dos canais habituais da Na Régua.
+            </p>
+            <p class="muted landing-contact-email-line" id="contactCadastroEmailLine" hidden></p>
+          </section>
+        </div>
+
         <div id="homeStatus" class="msg" role="status" aria-live="polite"></div>
       </section>
 

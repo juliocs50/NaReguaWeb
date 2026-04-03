@@ -1527,6 +1527,44 @@ async function ownerLogoutClick() {
   setOwnerStatus("");
 }
 
+function setupLandingContactLink() {
+  const a = document.getElementById("contactCadastroLink");
+  if (!a) return;
+  const subj = "Solicitação de cadastro — Barbearia (Na Régua)";
+  const body =
+    "Olá,\n\n" +
+    "Gostaria de solicitar o cadastro da minha barbearia na plataforma Na Régua.\n\n" +
+    "Nome da barbearia:\n" +
+    "Cidade / região:\n" +
+    "O meu nome:\n" +
+    "Telefone ou e-mail para resposta:\n\n" +
+    "Obrigado(a).\n";
+  const raw =
+    typeof window.NAREGUA_CONTACT_EMAIL === "string"
+      ? window.NAREGUA_CONTACT_EMAIL.trim()
+      : "";
+  const hasTo = raw.indexOf("@") > 0;
+  const to = hasTo ? encodeURIComponent(raw) : "";
+  a.href =
+    "mailto:" +
+    to +
+    (hasTo ? "?" : "?") +
+    "subject=" +
+    encodeURIComponent(subj) +
+    "&body=" +
+    encodeURIComponent(body);
+  const line = document.getElementById("contactCadastroEmailLine");
+  if (line) {
+    if (hasTo) {
+      line.textContent = "Pedidos diretos: " + raw;
+      line.hidden = false;
+    } else {
+      line.textContent = "";
+      line.hidden = true;
+    }
+  }
+}
+
 async function init() {
   try {
     await initFirebaseCore();
@@ -1534,6 +1572,8 @@ async function init() {
     setHomeStatus(e.message || "Erro ao iniciar Firebase.", true);
     return;
   }
+
+  setupLandingContactLink();
 
   firebase.auth().onAuthStateChanged(async function (user) {
     if (getSlugFromPath()) return;

@@ -129,6 +129,67 @@ body {
   margin-bottom: 24px;
 }
 
+.landing-extra {
+  margin-top: 32px;
+  padding-top: 28px;
+  border-top: 1px solid rgba(102, 80, 164, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.landing-block {
+  margin: 0;
+}
+
+.landing-block-title {
+  margin: 0 0 12px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--md-sys-color-primary);
+}
+
+.landing-block p {
+  margin: 0 0 12px;
+  color: var(--md-sys-color-on-surface-variant);
+  line-height: 1.55;
+  font-size: 0.94rem;
+}
+
+.landing-block p:last-child {
+  margin-bottom: 0;
+}
+
+.landing-about-foot {
+  margin-top: 14px !important;
+  padding-top: 14px;
+  border-top: 1px solid rgba(102, 80, 164, 0.08);
+  font-size: 0.88rem !important;
+  line-height: 1.5 !important;
+}
+
+.landing-contact-actions {
+  margin: 16px 0 12px;
+}
+
+.landing-contact-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.landing-contact-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.landing-contact-email-line {
+  margin: 10px 0 0;
+  font-size: 0.88rem;
+}
+
 .landing-search-wrap input[type="search"] {
   font-size: 1.05rem;
 }
@@ -496,11 +557,6 @@ select:focus {
 
 .find-stub .btn {
   margin-top: 12px;
-}
-
-.landing-register-hint {
-  margin-top: 24px;
-  margin-bottom: 0;
 }
 
 .owner-portal-head .owner-portal-title-row {
