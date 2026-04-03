@@ -240,10 +240,11 @@
         <div id="ownerPanelLocation" class="owner-panel card" data-panel="location" hidden>
           <h3 class="subsection-title">Localização (Google Maps)</h3>
           <p class="muted owner-location-hint">
-            Endereço completo da loja (rua, número, bairro, cidade). Usamos a API de Geocoding do
-            Google para obter coordenadas — os clientes aparecem em <strong>Perto de mim</strong> na
-            pesquisa. Configure <code>GOOGLE_MAPS_API_KEY</code> em <code>firebase-config.js</code> e
-            ative Geocoding API no Google Cloud.
+            Endereço completo da loja (rua, número, bairro, cidade). O site usa o
+            <strong>Maps JavaScript</strong> do Google (compatível com chave restrita por site). Ative
+            <strong>Maps JavaScript API</strong> e <strong>Geocoding API</strong> no mesmo projeto e
+            restrinja a chave ao domínio do site. Pode <strong>arrastar o alfinete</strong> no mapa
+            para afinar a entrada e voltar a guardar.
           </p>
           <label class="field">
             <span class="field-label">Endereço da barbearia</span>
@@ -254,6 +255,7 @@
               placeholder="Ex.: Rua das Flores 100, Centro, São Paulo — SP"
             ></textarea>
           </label>
+          <div id="ownerLocationMap" class="owner-location-map" aria-label="Mapa da localização"></div>
           <button type="button" id="ownerSaveLocationBtn" class="btn btn-filled">
             Guardar e geocodificar
           </button>

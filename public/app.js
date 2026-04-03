@@ -17,6 +17,11 @@ const LABEL_FREE_SLOT_PAST = "Horário encerrado";
 
 let db = null;
 
+let mapsJsLoadPromise = null;
+let ownerLocationMap = null;
+let ownerLocationMarker = null;
+let ownerLocationMarkerUserDragged = false;
+
 function toDateKey(date = new Date()) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -239,35 +244,147 @@ async function searchShopsNearby(userLat, userLng, maxKm) {
   return rows.slice(0, 50);
 }
 
-async function geocodeAddressWithGoogle(address) {
+function loadGoogleMapsJs() {
+  if (window.google && window.google.maps) {
+    return Promise.resolve();
+  }
+  if (mapsJsLoadPromise) return mapsJsLoadPromise;
   const key =
     (window.GOOGLE_MAPS_API_KEY && String(window.GOOGLE_MAPS_API_KEY).trim()) || "";
   if (!key) {
-    throw new Error(
-      "Defina GOOGLE_MAPS_API_KEY em firebase-config.js e ative a Geocoding API no Google Cloud."
+    return Promise.reject(
+      new Error(
+        "Defina GOOGLE_MAPS_API_KEY em firebase-config.js e ative Maps JavaScript API e Geocoding API no Google Cloud."
+      )
     );
   }
-  const url =
-    "https://maps.googleapis.com/maps/api/geocode/json?address=" +
-    encodeURIComponent(address) +
-    "&key=" +
-    encodeURIComponent(key);
-  const res = await fetch(url);
-  const json = await res.json();
-  if (json.status !== "OK" || !json.results || !json.results[0]) {
-    const msg =
-      json.status === "ZERO_RESULTS"
-        ? "Endereço não encontrado."
-        : json.error_message || "Geocoding falhou.";
-    throw new Error(msg);
+  mapsJsLoadPromise = new Promise(function (resolve, reject) {
+    const cbName = "__nareguaMapsCb_" + String(Date.now());
+    window[cbName] = function () {
+      try {
+        delete window[cbName];
+      } catch (_e) {
+        window[cbName] = undefined;
+      }
+      resolve();
+    };
+    const s = document.createElement("script");
+    s.src =
+      "https://maps.googleapis.com/maps/api/js?key=" +
+      encodeURIComponent(key) +
+      "&loading=async&callback=" +
+      cbName;
+    s.async = true;
+    s.onerror = function () {
+      try {
+        delete window[cbName];
+      } catch (_e) {
+        window[cbName] = undefined;
+      }
+      mapsJsLoadPromise = null;
+      reject(new Error("Falha ao carregar Google Maps."));
+    };
+    document.head.appendChild(s);
+  });
+  return mapsJsLoadPromise;
+}
+
+function geocodeForwardWithGoogleMaps(address) {
+  return loadGoogleMapsJs().then(function () {
+    return new Promise(function (resolve, reject) {
+      const geocoder = new google.maps.Geocoder();
+      geocoder.geocode({ address: address }, function (results, status) {
+        if (status === "OK" && results[0]) {
+          const loc = results[0].geometry.location;
+          resolve({
+            lat: loc.lat(),
+            lng: loc.lng(),
+            formatted: results[0].formatted_address || address,
+          });
+        } else if (status === "ZERO_RESULTS") {
+          reject(new Error("Endereço não encontrado."));
+        } else {
+          reject(new Error("Geocoding falhou: " + status));
+        }
+      });
+    });
+  });
+}
+
+function reverseGeocodeLatLngWithGoogleMaps(lat, lng) {
+  return loadGoogleMapsJs().then(function () {
+    return new Promise(function (resolve, reject) {
+      const geocoder = new google.maps.Geocoder();
+      geocoder.geocode(
+        { location: { lat: lat, lng: lng } },
+        function (results, status) {
+          if (status === "OK" && results[0]) {
+            const loc = results[0].geometry.location;
+            resolve({
+              lat: loc.lat(),
+              lng: loc.lng(),
+              formatted: results[0].formatted_address,
+            });
+          } else {
+            reject(new Error("Não foi possível obter o endereço deste ponto no mapa."));
+          }
+        }
+      );
+    });
+  });
+}
+
+function teardownOwnerLocationMap() {
+  ownerLocationMarkerUserDragged = false;
+  if (ownerLocationMarker) {
+    ownerLocationMarker.setMap(null);
+    ownerLocationMarker = null;
   }
-  const r = json.results[0];
-  const loc = r.geometry.location;
-  return {
-    lat: loc.lat,
-    lng: loc.lng,
-    formatted: r.formatted_address || address,
-  };
+  ownerLocationMap = null;
+}
+
+async function initOrRefreshOwnerLocationMap(lat, lng) {
+  const el = $("ownerLocationMap");
+  if (!el) return;
+  await loadGoogleMapsJs();
+  const hasSaved =
+    lat != null &&
+    lng != null &&
+    !isNaN(Number(lat)) &&
+    !isNaN(Number(lng));
+  const center = hasSaved
+    ? { lat: Number(lat), lng: Number(lng) }
+    : { lat: -15.793889, lng: -47.882778 };
+  const zoom = hasSaved ? 16 : 5;
+  if (!ownerLocationMap) {
+    ownerLocationMap = new google.maps.Map(el, {
+      center,
+      zoom,
+      mapTypeControl: false,
+      streetViewControl: false,
+      fullscreenControl: false,
+    });
+    ownerLocationMarker = new google.maps.Marker({
+      position: center,
+      map: ownerLocationMap,
+      draggable: true,
+    });
+    ownerLocationMarker.addListener("dragend", function () {
+      ownerLocationMarkerUserDragged = true;
+    });
+  } else {
+    ownerLocationMarker.setPosition(center);
+    ownerLocationMap.setCenter(center);
+    ownerLocationMap.setZoom(zoom);
+    ownerLocationMarkerUserDragged = false;
+  }
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      if (ownerLocationMap && window.google && window.google.maps) {
+        google.maps.event.trigger(ownerLocationMap, "resize");
+      }
+    });
+  });
 }
 
 function getCurrentPositionPromise() {
@@ -380,10 +497,17 @@ async function loadOwnerLocationPanel() {
         Number(d.lat).toFixed(5) +
         ", " +
         Number(d.lng).toFixed(5) +
-        " (mapa atualizado)";
+        " — pode arrastar o alfinete para afinar e voltar a guardar.";
     } else if (note) {
-      note.textContent = "Sem coordenadas — guarde um endereço para aparecer em «Perto de mim».";
+      note.textContent =
+        "Sem coordenadas — escreva o endereço e guarde, ou ajuste o alfinete no mapa.";
     }
+    initOrRefreshOwnerLocationMap(
+      d.lat != null ? Number(d.lat) : null,
+      d.lng != null ? Number(d.lng) : null
+    ).catch(function (e) {
+      console.warn("Mapa (localização):", e);
+    });
   } catch (_e) {
     /* ignore */
   }
@@ -1830,6 +1954,7 @@ async function ownerLogoutClick() {
   window.__ownerShopName = null;
   window.__ownerShopPublicUrl = "";
   window.__ownerShopPathSegment = "";
+  teardownOwnerLocationMap();
   $("ownerPassword").value = "";
   showLandingHome();
   $("loginCard").hidden = true;
@@ -1884,6 +2009,14 @@ async function init() {
   }
 
   setupLandingContactLink();
+
+  const ownerAddrInput = $("ownerAddressInput");
+  if (ownerAddrInput && !ownerAddrInput.dataset.nareguaDragReset) {
+    ownerAddrInput.dataset.nareguaDragReset = "1";
+    ownerAddrInput.addEventListener("input", function () {
+      ownerLocationMarkerUserDragged = false;
+    });
+  }
 
   firebase.auth().onAuthStateChanged(async function (user) {
     if (getSlugFromPath()) return;
@@ -1969,13 +2102,32 @@ async function init() {
         const note = $("ownerLocationNote");
         if (!shopId || !ta) return;
         const raw = ta.value.trim();
-        if (!raw) {
-          if (note) note.textContent = "Escreva o endereço.";
+        const canUseMarkerDrag =
+          ownerLocationMarkerUserDragged && ownerLocationMarker;
+        if (!raw && !canUseMarkerDrag) {
+          if (note) {
+            note.textContent =
+              "Escreva o endereço ou arraste o alfinete no mapa e guarde de novo.";
+          }
           return;
         }
         if (note) note.textContent = "A geocodificar…";
         try {
-          const g = await geocodeAddressWithGoogle(raw);
+          let g;
+          if (canUseMarkerDrag) {
+            const p = ownerLocationMarker.getPosition();
+            g = await reverseGeocodeLatLngWithGoogleMaps(p.lat(), p.lng());
+            ta.value = g.formatted;
+            ownerLocationMarkerUserDragged = false;
+          } else {
+            g = await geocodeForwardWithGoogleMaps(raw);
+            if (ownerLocationMarker && ownerLocationMap) {
+              ownerLocationMarker.setPosition({ lat: g.lat, lng: g.lng });
+              ownerLocationMap.panTo({ lat: g.lat, lng: g.lng });
+              ownerLocationMap.setZoom(16);
+            }
+            ownerLocationMarkerUserDragged = false;
+          }
           await db
             .collection("barbershops")
             .doc(shopId)
