@@ -573,6 +573,308 @@ function defaultScheduleByDay() {
   return o;
 }
 
+var OWNER_DAY_LABELS = [
+  "",
+  "Segunda-feira",
+  "Terça-feira",
+  "Quarta-feira",
+  "Quinta-feira",
+  "Sexta-feira",
+  "Sábado",
+  "Domingo",
+];
+
+function ownerDayShort(d) {
+  var x = ["", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+  return x[d] || "";
+}
+
+function previousOwnerCalendarDay(d) {
+  return d === 1 ? 7 : d - 1;
+}
+
+function normalizeBarberSchedule(scheduleByDay) {
+  var w = {
+    isWorking: true,
+    startTime: "09:00",
+    endTime: "18:00",
+    intervalMinutes: 30,
+    lunchStart: "12:00",
+    lunchEnd: "13:00",
+  };
+  var off = {
+    isWorking: false,
+    startTime: "09:00",
+    endTime: "18:00",
+    intervalMinutes: 30,
+    lunchStart: "",
+    lunchEnd: "",
+  };
+  var out = {};
+  for (var day = 1; day <= 7; day++) {
+    var s = scheduleByDay && (scheduleByDay[day] || scheduleByDay[String(day)]);
+    if (s) {
+      out[day] = {
+        isWorking: !!s.isWorking,
+        startTime: String(s.startTime || "09:00"),
+        endTime: String(s.endTime || "18:00"),
+        intervalMinutes: Number(
+          s.intervalMinutes != null ? s.intervalMinutes : 30
+        ),
+        lunchStart:
+          s.lunchStart != null && String(s.lunchStart).trim() !== ""
+            ? String(s.lunchStart).trim()
+            : "",
+        lunchEnd:
+          s.lunchEnd != null && String(s.lunchEnd).trim() !== ""
+            ? String(s.lunchEnd).trim()
+            : "",
+      };
+    } else {
+      out[day] = Object.assign({}, day <= 5 ? w : off);
+    }
+  }
+  return out;
+}
+
+function scheduleByDayToFirestoreMap(schedMap) {
+  var o = {};
+  for (var d = 1; d <= 7; d++) {
+    var s = schedMap[d];
+    if (!s) continue;
+    o[String(d)] = {
+      isWorking: !!s.isWorking,
+      startTime: String(s.startTime || "09:00"),
+      endTime: String(s.endTime || "18:00"),
+      intervalMinutes: Math.max(
+        5,
+        Number(s.intervalMinutes != null ? s.intervalMinutes : 30)
+      ),
+      lunchStart:
+        s.lunchStart && String(s.lunchStart).trim() !== ""
+          ? String(s.lunchStart).trim()
+          : null,
+      lunchEnd:
+        s.lunchEnd && String(s.lunchEnd).trim() !== ""
+          ? String(s.lunchEnd).trim()
+          : null,
+    };
+  }
+  return o;
+}
+
+function barberWorkingDaysLine(scheduleByDay) {
+  var norm = normalizeBarberSchedule(scheduleByDay);
+  var parts = [];
+  for (var d = 1; d <= 7; d++) {
+    if (norm[d].isWorking) parts.push(ownerDayShort(d));
+  }
+  return parts.length ? "Dias: " + parts.join(", ") : "Sem dias de trabalho definidos";
+}
+
+function toggleOwnerDayFieldsCard(card, working) {
+  var box = card.querySelector(".owner-day-edit-fields");
+  if (box) box.hidden = !working;
+}
+
+function getOwnerDayStateFromCard(card) {
+  var cb = card.querySelector(".owner-day-work");
+  var working = cb && cb.checked;
+  var start = card.querySelector(".owner-day-start");
+  var end = card.querySelector(".owner-day-end");
+  var intv = card.querySelector(".owner-day-interval");
+  var ls = card.querySelector(".owner-day-lunch-start");
+  var le = card.querySelector(".owner-day-lunch-end");
+  return {
+    isWorking: !!working,
+    startTime: (start && start.value.trim()) || "09:00",
+    endTime: (end && end.value.trim()) || "18:00",
+    intervalMinutes: Math.max(
+      5,
+      parseInt((intv && intv.value) || "30", 10) || 30
+    ),
+    lunchStart: ls && ls.value.trim() ? ls.value.trim() : "",
+    lunchEnd: le && le.value.trim() ? le.value.trim() : "",
+  };
+}
+
+function applyOwnerDayStateToCard(card, state) {
+  var cb = card.querySelector(".owner-day-work");
+  if (cb) cb.checked = state.isWorking;
+  var start = card.querySelector(".owner-day-start");
+  var end = card.querySelector(".owner-day-end");
+  var intv = card.querySelector(".owner-day-interval");
+  var ls = card.querySelector(".owner-day-lunch-start");
+  var le = card.querySelector(".owner-day-lunch-end");
+  if (start) start.value = state.startTime;
+  if (end) end.value = state.endTime;
+  if (intv) intv.value = String(state.intervalMinutes);
+  if (ls) ls.value = state.lunchStart || "";
+  if (le) le.value = state.lunchEnd || "";
+  toggleOwnerDayFieldsCard(card, state.isWorking);
+}
+
+function renderOwnerBarberEditDays(host, normalized) {
+  host.innerHTML = "";
+  function addField(container, labelText, className, value, opts) {
+    opts = opts || {};
+    var fl = document.createElement("label");
+    fl.className = "field" + (opts.fullRow ? " owner-day-fullrow" : "");
+    var sp = document.createElement("span");
+    sp.className = "field-label";
+    sp.textContent = labelText;
+    var inp = document.createElement("input");
+    inp.className = className;
+    if (opts.isNumber) {
+      inp.type = "number";
+      inp.min = "5";
+      inp.step = "5";
+    } else {
+      inp.type = "text";
+      inp.placeholder = opts.placeholder || "";
+    }
+    inp.value = value;
+    fl.appendChild(sp);
+    fl.appendChild(inp);
+    container.appendChild(fl);
+  }
+
+  for (var day = 1; day <= 7; day++) {
+    var s = normalized[day];
+    var prev = previousOwnerCalendarDay(day);
+
+    var card = document.createElement("div");
+    card.className = "owner-day-edit-card";
+    card.dataset.ownerDay = String(day);
+
+    var top = document.createElement("div");
+    top.className = "owner-day-edit-top";
+    var title = document.createElement("strong");
+    title.textContent = OWNER_DAY_LABELS[day];
+    var lab = document.createElement("label");
+    lab.className = "owner-day-work-label";
+    var cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.className = "owner-day-work";
+    cb.checked = s.isWorking;
+    lab.appendChild(cb);
+    lab.appendChild(document.createTextNode(" Trabalha neste dia"));
+    top.appendChild(title);
+    top.appendChild(lab);
+    card.appendChild(top);
+
+    var fields = document.createElement("div");
+    fields.className = "owner-day-edit-fields";
+    fields.hidden = !s.isWorking;
+
+    addField(fields, "Início", "owner-day-start", s.startTime, {
+      placeholder: "09:00",
+    });
+    addField(fields, "Fim", "owner-day-end", s.endTime, {
+      placeholder: "18:00",
+    });
+    addField(fields, "Intervalo entre horários (min)", "owner-day-interval", String(s.intervalMinutes), {
+      fullRow: true,
+      isNumber: true,
+    });
+    addField(fields, "Almoço — início", "owner-day-lunch-start", s.lunchStart || "", {
+      placeholder: "12:00",
+    });
+    addField(fields, "Almoço — fim", "owner-day-lunch-end", s.lunchEnd || "", {
+      placeholder: "13:00",
+    });
+
+    cb.addEventListener("change", function () {
+      toggleOwnerDayFieldsCard(card, cb.checked);
+    });
+
+    card.appendChild(fields);
+
+    var copyBtn = document.createElement("button");
+    copyBtn.type = "button";
+    copyBtn.className = "owner-day-copy";
+    copyBtn.textContent = "Copiar horários de " + ownerDayShort(prev);
+    copyBtn.addEventListener("click", function () {
+      var prevCard = host.querySelector('[data-owner-day="' + prev + '"]');
+      if (!prevCard) return;
+      applyOwnerDayStateToCard(card, getOwnerDayStateFromCard(prevCard));
+    });
+    card.appendChild(copyBtn);
+
+    host.appendChild(card);
+  }
+}
+
+function readOwnerBarberEditScheduleFromHost(host) {
+  var map = {};
+  for (var day = 1; day <= 7; day++) {
+    var card = host.querySelector('[data-owner-day="' + day + '"]');
+    if (card) map[day] = getOwnerDayStateFromCard(card);
+  }
+  return map;
+}
+
+function closeOwnerBarberEditModal() {
+  var ov = $("ownerBarberEditOverlay");
+  if (ov) ov.hidden = true;
+  window.__ownerBarberEditCtx = null;
+}
+
+function openOwnerBarberEditModal(barber) {
+  var shopId = window.__ownerShopId;
+  if (!shopId || !barber || !barber.id) return;
+  window.__ownerBarberEditCtx = { shopId: shopId, barberId: barber.id };
+  var nameIn = $("ownerBarberEditName");
+  var daysHost = $("ownerBarberEditDays");
+  if (nameIn) nameIn.value = barber.name || "";
+  if (daysHost) {
+    renderOwnerBarberEditDays(
+      daysHost,
+      normalizeBarberSchedule(barber.scheduleByDay)
+    );
+  }
+  var ov = $("ownerBarberEditOverlay");
+  if (ov) ov.hidden = false;
+  if (nameIn) nameIn.focus();
+}
+
+async function saveOwnerBarberEditModal() {
+  var ctx = window.__ownerBarberEditCtx;
+  if (!ctx) return;
+  var name = ($("ownerBarberEditName") && $("ownerBarberEditName").value.trim()) || "";
+  var host = $("ownerBarberEditDays");
+  if (!name) {
+    setOwnerStatus("Indique o nome do barbeiro.", true);
+    return;
+  }
+  var sched = readOwnerBarberEditScheduleFromHost(host);
+  var any = false;
+  for (var d = 1; d <= 7; d++) {
+    if (sched[d] && sched[d].isWorking) any = true;
+  }
+  if (!any) {
+    setOwnerStatus("Marque ao menos um dia de trabalho.", true);
+    return;
+  }
+  try {
+    await db
+      .collection("barbershops")
+      .doc(ctx.shopId)
+      .collection("barbers")
+      .doc(ctx.barberId)
+      .update({
+        name: name,
+        scheduleByDay: scheduleByDayToFirestoreMap(sched),
+      });
+    closeOwnerBarberEditModal();
+    await loadOwnerBarbersPanel();
+    await loadOwnerAgendaPanel();
+    setOwnerStatus("Barbeiro atualizado.");
+  } catch (e) {
+    setOwnerStatus(e.message || "Erro ao guardar.", true);
+  }
+}
+
 async function resolveOwnerShop(uid) {
   const snap = await db
     .collection("barbershops")
@@ -639,10 +941,29 @@ async function loadOwnerBarbersPanel() {
     return;
   }
   barbers.forEach(function (b) {
-    const d = document.createElement("div");
-    d.className = "owner-list-item";
-    d.textContent = b.name;
-    listEl.appendChild(d);
+    const card = document.createElement("div");
+    card.className = "owner-barber-card";
+    const main = document.createElement("div");
+    main.className = "owner-barber-card-main";
+    const nm = document.createElement("p");
+    nm.className = "owner-barber-card-name";
+    nm.textContent = b.name;
+    const sub = document.createElement("p");
+    sub.className = "owner-barber-card-sub";
+    sub.textContent = barberWorkingDaysLine(b.scheduleByDay);
+    main.appendChild(nm);
+    main.appendChild(sub);
+    const editBtn = document.createElement("button");
+    editBtn.type = "button";
+    editBtn.className = "btn btn-outline btn-sm";
+    editBtn.textContent = "Editar";
+    editBtn.setAttribute("aria-label", "Editar " + b.name);
+    editBtn.addEventListener("click", function () {
+      openOwnerBarberEditModal(b);
+    });
+    card.appendChild(main);
+    card.appendChild(editBtn);
+    listEl.appendChild(card);
   });
 }
 
@@ -987,9 +1308,24 @@ async function loadOwnerAgendaPanel() {
   barbers.forEach(function (barber) {
     const col = document.createElement("div");
     col.className = "owner-agenda-col";
+    const head = document.createElement("div");
+    head.className = "owner-agenda-col-head";
     const h4 = document.createElement("h4");
     h4.textContent = barber.name;
-    col.appendChild(h4);
+    const ed = document.createElement("button");
+    ed.type = "button";
+    ed.className = "btn btn-ghost btn-sm";
+    ed.textContent = "Editar";
+    ed.setAttribute(
+      "aria-label",
+      "Editar horários de " + barber.name
+    );
+    ed.addEventListener("click", function () {
+      openOwnerBarberEditModal(barber);
+    });
+    head.appendChild(h4);
+    head.appendChild(ed);
+    col.appendChild(head);
     const delayDiv = document.createElement("div");
     delayDiv.className = "owner-agenda-delay";
     [5, 10, 20].forEach(function (dm) {
@@ -1315,6 +1651,19 @@ async function init() {
   $("ownerModalOverlay").addEventListener("click", function (ev) {
     if (ev.target === $("ownerModalOverlay")) closeOwnerBookModal();
   });
+
+  var barberEditOv = $("ownerBarberEditOverlay");
+  if (barberEditOv) {
+    $("ownerBarberEditCancel").addEventListener("click", closeOwnerBarberEditModal);
+    $("ownerBarberEditSave").addEventListener("click", function () {
+      saveOwnerBarberEditModal().catch(function (e) {
+        setOwnerStatus(e.message || "Erro", true);
+      });
+    });
+    barberEditOv.addEventListener("click", function (ev) {
+      if (ev.target === barberEditOv) closeOwnerBarberEditModal();
+    });
+  }
 
   $("dateKey").addEventListener("change", loadAvailability);
   $("barberSelect").addEventListener("change", loadAvailability);
