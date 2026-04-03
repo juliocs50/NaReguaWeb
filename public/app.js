@@ -201,6 +201,194 @@ async function searchShopsByNamePrefix(query) {
   });
 }
 
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const toRad = function (x) {
+    return (x * Math.PI) / 180;
+  };
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+async function searchShopsNearby(userLat, userLng, maxKm) {
+  const snap = await db.collection("barbershops").get();
+  const rows = [];
+  snap.forEach(function (doc) {
+    const d = doc.data();
+    const la = d.lat;
+    const ln = d.lng;
+    if (la == null || ln == null) return;
+    const nla = Number(la);
+    const nln = Number(ln);
+    if (isNaN(nla) || isNaN(nln)) return;
+    const dist = haversineKm(userLat, userLng, nla, nln);
+    if (dist > maxKm) return;
+    rows.push({ id: doc.id, data: d, distKm: dist });
+  });
+  rows.sort(function (a, b) {
+    return a.distKm - b.distKm;
+  });
+  return rows.slice(0, 50);
+}
+
+async function geocodeAddressWithGoogle(address) {
+  const key =
+    (window.GOOGLE_MAPS_API_KEY && String(window.GOOGLE_MAPS_API_KEY).trim()) || "";
+  if (!key) {
+    throw new Error(
+      "Defina GOOGLE_MAPS_API_KEY em firebase-config.js e ative a Geocoding API no Google Cloud."
+    );
+  }
+  const url =
+    "https://maps.googleapis.com/maps/api/geocode/json?address=" +
+    encodeURIComponent(address) +
+    "&key=" +
+    encodeURIComponent(key);
+  const res = await fetch(url);
+  const json = await res.json();
+  if (json.status !== "OK" || !json.results || !json.results[0]) {
+    const msg =
+      json.status === "ZERO_RESULTS"
+        ? "Endereço não encontrado."
+        : json.error_message || "Geocoding falhou.";
+    throw new Error(msg);
+  }
+  const r = json.results[0];
+  const loc = r.geometry.location;
+  return {
+    lat: loc.lat,
+    lng: loc.lng,
+    formatted: r.formatted_address || address,
+  };
+}
+
+function getCurrentPositionPromise() {
+  return new Promise(function (resolve, reject) {
+    if (!navigator.geolocation) {
+      reject(new Error("Este navegador não suporta geolocalização."));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: false,
+      timeout: 20000,
+      maximumAge: 120000,
+    });
+  });
+}
+
+function appendFindShopResultRow(resultsEl, row, distKm) {
+  const seg = pathSegmentFromShopData(row.data);
+  const name = row.data.name || "Barbearia";
+  const base = String(window.location.origin || "").replace(/\/$/, "");
+  const href = seg ? base + "/" + encodeURIComponent(seg) : "";
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "find-shop-result-btn";
+  const strong = document.createElement("strong");
+  strong.textContent = name;
+  btn.appendChild(strong);
+  if (distKm != null && !isNaN(distKm)) {
+    const distEl = document.createElement("span");
+    distEl.className = "find-shop-result-dist";
+    distEl.textContent = distKm.toFixed(1) + " km";
+    btn.appendChild(distEl);
+  }
+  const addr = row.data.address;
+  if (addr && String(addr).trim()) {
+    const ad = document.createElement("span");
+    ad.className = "find-shop-result-addr";
+    ad.textContent = String(addr).trim();
+    btn.appendChild(ad);
+  }
+  if (href) {
+    const span = document.createElement("span");
+    span.className = "find-shop-result-url";
+    span.textContent = href;
+    btn.appendChild(span);
+  }
+  btn.addEventListener("click", function () {
+    if (!href) return;
+    window.location.href = href;
+  });
+  btn.disabled = !href;
+  resultsEl.appendChild(btn);
+}
+
+async function runFindShopNearby() {
+  const resultsEl = $("findShopResults");
+  if (resultsEl) {
+    resultsEl.innerHTML = "";
+    resultsEl.hidden = true;
+  }
+  let maxKm = parseFloat(
+    ($("findNearbyRadius") && $("findNearbyRadius").value) || "40",
+    10
+  );
+  if (isNaN(maxKm) || maxKm < 1) maxKm = 40;
+  setFindShopStatus("A obter localização…");
+  try {
+    await ensureAnonymousForPublicBooking();
+    const pos = await getCurrentPositionPromise();
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    setFindShopStatus("A procurar barbearias até " + maxKm + " km…");
+    const rows = await searchShopsNearby(lat, lng, maxKm);
+    if (!resultsEl) return;
+    if (!rows.length) {
+      setFindShopStatus(
+        "Nenhuma barbearia com localização neste raio. Aumente o raio ou use a busca por nome."
+      );
+      return;
+    }
+    setFindShopStatus(rows.length + " resultado(s). Toque para agendar.");
+    rows.forEach(function (row) {
+      appendFindShopResultRow(resultsEl, row, row.distKm);
+    });
+    resultsEl.hidden = false;
+  } catch (e) {
+    const code = e && e.code;
+    let msg = e.message || "Erro";
+    if (code === 1) msg = "Permissão de localização negada.";
+    if (code === 2) msg = "Localização indisponível.";
+    if (code === 3) msg = "Tempo esgotado ao obter localização.";
+    setFindShopStatus(msg, true);
+  }
+}
+
+async function loadOwnerLocationPanel() {
+  const shopId = window.__ownerShopId;
+  const ta = $("ownerAddressInput");
+  const note = $("ownerLocationNote");
+  if (!shopId || !ta) return;
+  if (note) note.textContent = "";
+  try {
+    const doc = await db.collection("barbershops").doc(shopId).get();
+    if (!doc.exists) return;
+    const d = doc.data();
+    ta.value = d.address != null ? String(d.address) : "";
+    if (note && d.lat != null && d.lng != null) {
+      note.textContent =
+        "Coordenadas: " +
+        Number(d.lat).toFixed(5) +
+        ", " +
+        Number(d.lng).toFixed(5) +
+        " (mapa atualizado)";
+    } else if (note) {
+      note.textContent = "Sem coordenadas — guarde um endereço para aparecer em «Perto de mim».";
+    }
+  } catch (_e) {
+    /* ignore */
+  }
+}
+
 function setFindShopStatus(msg, isError) {
   const el = $("findShopStatus");
   if (!el) return;
@@ -274,29 +462,8 @@ async function runFindShopSearch() {
       return;
     }
     setFindShopStatus(rows.length + " resultado(s). Toque numa loja para agendar.");
-    const base = String(window.location.origin || "").replace(/\/$/, "");
     rows.forEach(function (row) {
-      const seg = pathSegmentFromShopData(row.data);
-      const name = row.data.name || "Barbearia";
-      const href = seg ? base + "/" + encodeURIComponent(seg) : "";
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "find-shop-result-btn";
-      const strong = document.createElement("strong");
-      strong.textContent = name;
-      btn.appendChild(strong);
-      if (href) {
-        const span = document.createElement("span");
-        span.className = "find-shop-result-url";
-        span.textContent = href;
-        btn.appendChild(span);
-      }
-      btn.addEventListener("click", function () {
-        if (!href) return;
-        window.location.href = href;
-      });
-      btn.disabled = !href;
-      resultsEl.appendChild(btn);
+      appendFindShopResultRow(resultsEl, row, null);
     });
     resultsEl.hidden = false;
   } catch (e) {
@@ -1051,6 +1218,7 @@ function switchOwnerTab(name) {
     agenda: $("ownerPanelAgenda"),
     menu: $("ownerPanelMenu"),
     finance: $("ownerPanelFinance"),
+    location: $("ownerPanelLocation"),
   };
   Object.keys(map).forEach(function (k) {
     const el = map[k];
@@ -1064,6 +1232,8 @@ function switchOwnerTab(name) {
     loadOwnerMenuPanel().catch(function () {});
   } else if (name === "finance") {
     loadOwnerFinancePanel().catch(function () {});
+  } else if (name === "location") {
+    loadOwnerLocationPanel().catch(function () {});
   }
 }
 
@@ -1779,6 +1949,52 @@ async function init() {
       ev.preventDefault();
       runFindShopSearch().catch(function (e) {
         setFindShopStatus(e.message || "Erro", true);
+      });
+    });
+  }
+  const findNearbyBtn = $("findNearbyBtn");
+  if (findNearbyBtn) {
+    findNearbyBtn.addEventListener("click", function () {
+      runFindShopNearby().catch(function (e) {
+        setFindShopStatus(e.message || "Erro", true);
+      });
+    });
+  }
+  const ownerSaveLoc = $("ownerSaveLocationBtn");
+  if (ownerSaveLoc) {
+    ownerSaveLoc.addEventListener("click", function () {
+      (async function () {
+        const shopId = window.__ownerShopId;
+        const ta = $("ownerAddressInput");
+        const note = $("ownerLocationNote");
+        if (!shopId || !ta) return;
+        const raw = ta.value.trim();
+        if (!raw) {
+          if (note) note.textContent = "Escreva o endereço.";
+          return;
+        }
+        if (note) note.textContent = "A geocodificar…";
+        try {
+          const g = await geocodeAddressWithGoogle(raw);
+          await db
+            .collection("barbershops")
+            .doc(shopId)
+            .update({
+              address: g.formatted,
+              lat: g.lat,
+              lng: g.lng,
+            });
+          ta.value = g.formatted;
+          if (note) {
+            note.textContent =
+              "Guardado. Clientes podem usar «Perto de mim» neste site.";
+          }
+        } catch (e) {
+          if (note) note.textContent = e.message || "Erro";
+        }
+      })().catch(function (e) {
+        const note = $("ownerLocationNote");
+        if (note) note.textContent = e.message || "Erro";
       });
     });
   }

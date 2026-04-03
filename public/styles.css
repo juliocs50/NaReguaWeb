@@ -628,6 +628,72 @@ select:focus {
   margin-top: 4px;
 }
 
+.find-shop-nearby {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin: 16px 0 8px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(102, 80, 164, 0.12);
+}
+
+.find-shop-radius-field {
+  flex: 0 1 140px;
+  margin-bottom: 0;
+}
+
+.find-shop-radius {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--md-sys-color-outline);
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+.find-nearby-btn {
+  flex: 1 1 200px;
+}
+
+.find-shop-result-dist {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--md-sys-color-primary);
+}
+
+.find-shop-result-addr {
+  font-size: 0.82rem;
+  color: var(--md-sys-color-on-surface-variant);
+  line-height: 1.35;
+}
+
+.owner-location-hint {
+  margin: 0 0 12px;
+  line-height: 1.5;
+  font-size: 0.88rem;
+}
+
+.owner-location-hint code {
+  font-size: 0.8rem;
+}
+
+.owner-address-textarea {
+  width: 100%;
+  min-height: 88px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--md-sys-color-outline);
+  font-family: inherit;
+  font-size: 1rem;
+  resize: vertical;
+}
+
+.owner-location-note {
+  margin-top: 12px;
+  font-size: 0.88rem;
+}
+
 .owner-portal-head .owner-portal-title-row {
   display: flex;
   flex-wrap: wrap;

@@ -69,9 +69,9 @@
         <div id="findStub" class="find-stub card-inner" hidden>
           <h2 class="subsection-title">Encontrar barbearia</h2>
           <p class="muted find-shop-intro">
-            Escreva pelo menos <strong>duas letras</strong> do nome da barbearia e toque em
-            <strong>Procurar</strong>. O resultado abre a página de agendamento deste site
-            (funciona em qualquer domínio onde o Na Régua estiver instalado).
+            <strong>Por nome:</strong> pelo menos duas letras e <strong>Procurar</strong>.
+            <strong>Perto de si:</strong> use a sua localização (o navegador pede permissão) e veja
+            barbearias com endereço no mapa até ao raio escolhido.
           </p>
           <form id="findShopForm" class="find-shop-form">
             <label class="field find-shop-field">
@@ -87,6 +87,19 @@
             </label>
             <button type="submit" class="btn btn-filled find-shop-submit">Procurar</button>
           </form>
+          <div class="find-shop-nearby">
+            <label class="field find-shop-radius-field">
+              <span class="field-label">Raio</span>
+              <select id="findNearbyRadius" class="find-shop-radius">
+                <option value="10">10 km</option>
+                <option value="25">25 km</option>
+                <option value="40" selected>40 km</option>
+              </select>
+            </label>
+            <button type="button" id="findNearbyBtn" class="btn btn-outline find-nearby-btn">
+              Usar a minha localização
+            </button>
+          </div>
           <p id="findShopStatus" class="muted find-shop-status" role="status" aria-live="polite"></p>
           <div id="findShopResults" class="find-shop-results" hidden></div>
           <button type="button" id="findStubBack" class="btn btn-outline find-shop-back">Voltar</button>
@@ -162,6 +175,7 @@
           <button type="button" class="owner-tab" data-owner-tab="agenda">Agenda</button>
           <button type="button" class="owner-tab" data-owner-tab="menu">Serviço</button>
           <button type="button" class="owner-tab" data-owner-tab="finance">Finanças</button>
+          <button type="button" class="owner-tab" data-owner-tab="location">Localização</button>
         </nav>
 
         <div id="ownerPanelBarbers" class="owner-panel card" data-panel="barbers">
@@ -221,6 +235,29 @@
           <h3 class="subsection-title">Finanças — taxa do app</h3>
           <p class="muted" id="ownerFinanceBlurb"></p>
           <p class="owner-finance-total" id="ownerFinanceTotal">—</p>
+        </div>
+
+        <div id="ownerPanelLocation" class="owner-panel card" data-panel="location" hidden>
+          <h3 class="subsection-title">Localização (Google Maps)</h3>
+          <p class="muted owner-location-hint">
+            Endereço completo da loja (rua, número, bairro, cidade). Usamos a API de Geocoding do
+            Google para obter coordenadas — os clientes aparecem em <strong>Perto de mim</strong> na
+            pesquisa. Configure <code>GOOGLE_MAPS_API_KEY</code> em <code>firebase-config.js</code> e
+            ative Geocoding API no Google Cloud.
+          </p>
+          <label class="field">
+            <span class="field-label">Endereço da barbearia</span>
+            <textarea
+              id="ownerAddressInput"
+              rows="3"
+              class="owner-address-textarea"
+              placeholder="Ex.: Rua das Flores 100, Centro, São Paulo — SP"
+            ></textarea>
+          </label>
+          <button type="button" id="ownerSaveLocationBtn" class="btn btn-filled">
+            Guardar e geocodificar
+          </button>
+          <p id="ownerLocationNote" class="muted owner-location-note" role="status"></p>
         </div>
 
         <div id="ownerStatus" class="msg" role="status"></div>
