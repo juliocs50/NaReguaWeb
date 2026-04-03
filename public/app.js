@@ -2175,7 +2175,7 @@ async function init() {
           }
           return;
         }
-        if (note) note.textContent = "A geocodificar…";
+        if (note) note.textContent = "A guardar…";
         try {
           let g;
           if (canUseMarkerDrag) {

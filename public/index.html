@@ -200,9 +200,10 @@
 
         <div id="ownerPanelAgenda" class="owner-panel card" data-panel="agenda" hidden>
           <h3 class="subsection-title">Agenda</h3>
+          <!-- Uma agenda por vez: menos scroll quando há vários barbeiros -->
           <p class="muted owner-agenda-hint">
-            Escolha o barbeiro para ver só a agenda dele (no telemóvel evita lista longa). Ao lado do nome,
-            <strong>Editar</strong> abre o painel de horários.
+            Selecione o barbeiro para ver a agenda do dia. Ao lado do nome, <strong>Editar</strong> abre o
+            painel de horários.
           </p>
           <label class="field owner-agenda-barber-field">
             <span class="field-label">Barbeiro</span>
@@ -243,13 +244,12 @@
         </div>
 
         <div id="ownerPanelLocation" class="owner-panel card" data-panel="location" hidden>
-          <h3 class="subsection-title">Localização (Google Maps)</h3>
+          <h3 class="subsection-title">Localização</h3>
+          <!-- Integração: Google Maps no cliente; chave em firebase-config.js -->
           <p class="muted owner-location-hint">
-            Endereço completo da loja (rua, número, bairro, cidade). O site usa o
-            <strong>Maps JavaScript</strong> do Google (compatível com chave restrita por site). Ative
-            <strong>Maps JavaScript API</strong> e <strong>Geocoding API</strong> no mesmo projeto e
-            restrinja a chave ao domínio do site. Pode <strong>arrastar o alfinete</strong> no mapa
-            para afinar a entrada e voltar a guardar.
+            Endereço completo da loja (rua, número, bairro, cidade). Assim os clientes encontram a
+            barbearia na pesquisa <strong>Perto de mim</strong>. Pode <strong>arrastar o alfinete</strong> no
+            mapa para afinar o ponto e voltar a guardar.
           </p>
           <label class="field">
             <span class="field-label">Endereço da barbearia</span>
@@ -262,7 +262,7 @@
           </label>
           <div id="ownerLocationMap" class="owner-location-map" aria-label="Mapa da localização"></div>
           <button type="button" id="ownerSaveLocationBtn" class="btn btn-filled">
-            Guardar e geocodificar
+            Guardar localização
           </button>
           <p id="ownerLocationNote" class="muted owner-location-note" role="status"></p>
         </div>
