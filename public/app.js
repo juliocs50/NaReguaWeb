@@ -73,6 +73,27 @@ function setHomeStatus(msg, isError = false) {
   el.classList.toggle("err", !!isError);
 }
 
+/** Títulos da página de marcação (cliente abre o link partilhado pela barbearia). */
+function applyBookingHeadlines(shopName) {
+  const titleEl = $("bookingTitle");
+  const subEl = $("bookingSubtitle");
+  if (!titleEl || !subEl) return;
+  const name = shopName && String(shopName).trim();
+  const sub =
+    "Agende pelo Barb x Go — escolha data, barbeiro, serviço e confirme o horário.";
+  if (name) {
+    titleEl.textContent = name;
+    subEl.textContent = sub;
+  } else {
+    titleEl.textContent = "Agendar pelo Barb x Go";
+    subEl.textContent = sub;
+  }
+  const appEl = $("app");
+  if (appEl && !appEl.hidden) {
+    document.title = name ? name + " · Barb x Go" : "Agendar · Barb x Go";
+  }
+}
+
 function setOwnerStatus(msg, isError = false) {
   const el = $("ownerStatus");
   if (!el) return;
@@ -767,10 +788,7 @@ async function resolveAndLoad(slug) {
   if (!r) throw new Error("Barbearia não encontrada.");
   window.__shopId = r.shopId;
   window.__shopName = r.name || "";
-  $("bookingTitle").textContent = r.name ? `Agendar — ${r.name}` : "Agendar";
-  $("bookingSubtitle").textContent = r.name
-    ? "Escolha data, barbeiro, serviço e horário."
-    : "";
+  applyBookingHeadlines(window.__shopName);
   showShopHeader(r.name || "");
   setBodyLayout("app");
   $("homeLanding").hidden = true;
@@ -805,6 +823,23 @@ async function loadData(shopId) {
 
   $("dateKey").value = toDateKey();
   await loadAvailability();
+
+  let nm = window.__shopName;
+  if ((!nm || !String(nm).trim()) && shopId && db) {
+    try {
+      const ds = await db.collection("barbershops").doc(shopId).get();
+      if (ds.exists) {
+        nm = ds.data().name || "";
+        window.__shopName = nm;
+      }
+    } catch (_e) {
+      /* ignore */
+    }
+  }
+  const appEl = $("app");
+  if (appEl && !appEl.hidden) {
+    applyBookingHeadlines(nm || "");
+  }
 }
 
 async function loadAvailability() {
@@ -978,7 +1013,9 @@ async function book() {
     $("slots").querySelectorAll(".slot").forEach(function (b) {
       b.disabled = true;
     });
-    setStatus("Agendamento confirmado. Referência: " + appointmentId + ".");
+    setStatus(
+      "Agendamento confirmado no Barb x Go. Referência: " + appointmentId + "."
+    );
     await loadAvailability();
   } catch (e) {
     setStatus(e.message || "Não foi possível confirmar.", true);
@@ -1330,6 +1367,7 @@ async function resolveOwnerShop(uid) {
 
 function showLandingHome() {
   setBodyLayout("landing");
+  document.title = "Barb x Go";
   $("homeLanding").hidden = false;
   $("ownerPortal").hidden = true;
   $("app").hidden = true;
@@ -1338,6 +1376,8 @@ function showLandingHome() {
 
 function showOwnerPortalUI() {
   setBodyLayout("app");
+  document.title =
+    (window.__ownerShopName || "Barbearia") + " · Barb x Go";
   $("homeLanding").hidden = true;
   $("ownerPortal").hidden = false;
   $("app").hidden = true;
@@ -2252,7 +2292,7 @@ async function init() {
       const ok = await copyTextToClipboard(url);
       setOwnerStatus(
         ok
-          ? "Link copiado. Cole no site do WhatsApp Business ou envie ao cliente."
+          ? "Link Barb x Go copiado — envie ao cliente (WhatsApp, redes, etc.)."
           : "Copie manualmente: " + url
       );
     })().catch(function (e) {
@@ -2269,7 +2309,11 @@ async function init() {
         return;
       }
       const nome = window.__ownerShopName || "a nossa barbearia";
-      const text = "Agende em " + nome + " pelo link:\n" + url;
+      const text =
+        "Olá! Agende em " +
+        nome +
+        " pelo Barb x Go — é só abrir o link e escolher horário:\n" +
+        url;
       window.open(
         "https://wa.me/?text=" + encodeURIComponent(text),
         "_blank",
@@ -2412,13 +2456,12 @@ async function init() {
     try {
       await ensureAnonymousForPublicBooking();
       window.__shopId = queryShopId.trim();
+      window.__shopName = "";
       setBodyLayout("app");
       $("homeLanding").hidden = true;
       $("ownerPortal").hidden = true;
       $("app").hidden = false;
-      $("bookingTitle").textContent = "Agendar";
-      $("bookingSubtitle").textContent =
-        "Escolha data, barbeiro, serviço e horário.";
+      applyBookingHeadlines("");
       hideShopHeader();
       setStatus("");
       await loadData(window.__shopId);
