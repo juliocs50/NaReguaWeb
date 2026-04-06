@@ -1,6 +1,6 @@
-# NaReguaWeb — agendamento para clientes
+# Barb x Go (web) — agendamento para clientes
 
-Site estático que fala **direto com o Firestore** (SDK Web), como o app Android: **mesmo projeto** `naregua-61564`, mesmas coleções `barbershops/{id}/barbers`, `services`, `appointments`.
+Site estático que fala **direto com o Firestore** (SDK Web), como o app **Barb x Go** (Android): **mesmo projeto** `naregua-61564`, mesmas coleções `barbershops/{id}/barbers`, `services`, `appointments`.
 
 **Não é obrigatório usar Cloud Functions** para marcar horário neste site.
 

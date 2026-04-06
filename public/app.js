@@ -1992,7 +1992,7 @@ async function ownerLoginSubmit() {
     if (snap.empty) {
       await firebase.auth().signOut();
       throw new Error(
-        "Nenhuma barbearia ligada a esta conta. O cadastro é feito no aplicativo Android."
+        "Nenhuma barbearia ligada a esta conta. O cadastro é feito no aplicativo Barb x Go."
       );
     }
     const doc = snap.docs[0];
@@ -2029,10 +2029,10 @@ async function ownerLogoutClick() {
 function setupLandingContactLink() {
   const a = document.getElementById("contactCadastroLink");
   if (!a) return;
-  const subj = "Solicitação de cadastro — Barbearia (Na Régua)";
+  const subj = "Solicitação de cadastro — Barbearia (Barb x Go)";
   const body =
     "Olá,\n\n" +
-    "Gostaria de solicitar o cadastro da minha barbearia na plataforma Na Régua.\n\n" +
+    "Gostaria de solicitar o cadastro da minha barbearia na plataforma Barb x Go.\n\n" +
     "Nome da barbearia:\n" +
     "Cidade / região:\n" +
     "O meu nome:\n" +
