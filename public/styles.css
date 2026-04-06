@@ -1,15 +1,15 @@
-/* Alinhado ao Material 3 / app (roxo primary ~ #6650a4) */
+/* Tema escuro global (fundo preto, texto claro — alinhado à landing) */
 :root {
-  --md-sys-color-primary: #6650a4;
-  --md-sys-color-on-primary: #ffffff;
-  --md-sys-color-surface: #fffbfe;
-  --md-sys-color-surface-container: #f3edf7;
-  --md-sys-color-surface-container-high: #ece6f0;
-  --md-sys-color-on-surface: #1c1b1f;
-  --md-sys-color-on-surface-variant: #49454f;
-  --md-sys-color-outline: #79747e;
-  --danger: #b3261e;
-  --ok: #1b5e20;
+  --md-sys-color-primary: #ffffff;
+  --md-sys-color-on-primary: #0a0a0a;
+  --md-sys-color-surface: #141414;
+  --md-sys-color-surface-container: #1c1c1c;
+  --md-sys-color-surface-container-high: #262626;
+  --md-sys-color-on-surface: #ffffff;
+  --md-sys-color-on-surface-variant: rgba(255, 255, 255, 0.66);
+  --md-sys-color-outline: rgba(255, 255, 255, 0.22);
+  --danger: #ff8a80;
+  --ok: #a5d6a7;
   --font: "Roboto", system-ui, sans-serif;
 }
 
@@ -25,7 +25,7 @@ body {
   margin: 0;
   min-height: 100vh;
   font-family: var(--font);
-  background: linear-gradient(165deg, #f6f0ff 0%, #fffbfe 40%, #ede7f6 100%);
+  background: #000000;
   color: var(--md-sys-color-on-surface);
 }
 
@@ -281,9 +281,10 @@ body.layout-landing .landing-contact-btn.btn-filled {
 }
 
 .top-bar {
-  background: var(--md-sys-color-primary);
-  color: var(--md-sys-color-on-primary);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  background: #000000;
+  color: #ffffff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: none;
 }
 
 .top-bar-inner {
@@ -347,8 +348,8 @@ body.layout-landing .landing-contact-btn.btn-filled {
   border-radius: 16px;
   padding: 20px 20px;
   margin-bottom: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(102, 80, 164, 0.12);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .title {
@@ -391,7 +392,7 @@ body.layout-landing .landing-contact-btn.btn-filled {
 .landing-extra {
   margin-top: 32px;
   padding-top: 28px;
-  border-top: 1px solid rgba(102, 80, 164, 0.12);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   flex-direction: column;
   gap: 28px;
@@ -472,7 +473,7 @@ body.layout-landing .landing-contact-btn.btn-filled {
   gap: 12px;
   padding: 14px 16px;
   border-radius: 14px;
-  border: 1px solid rgba(102, 80, 164, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   background: var(--md-sys-color-surface-container);
   text-decoration: none;
   color: inherit;
@@ -481,8 +482,8 @@ body.layout-landing .landing-contact-btn.btn-filled {
 
 .shop-pick-card:hover {
   background: var(--md-sys-color-surface-container-high);
-  border-color: rgba(102, 80, 164, 0.45);
-  box-shadow: 0 2px 8px rgba(102, 80, 164, 0.12);
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
 }
 
 .shop-pick-card:focus-visible {
@@ -520,7 +521,7 @@ body.layout-landing .landing-contact-btn.btn-filled {
 .landing-advanced {
   margin-top: 28px;
   padding-top: 20px;
-  border-top: 1px solid rgba(102, 80, 164, 0.15);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .landing-advanced-summary {
@@ -549,6 +550,7 @@ body.layout-landing .landing-contact-btn.btn-filled {
   margin: 0 0 12px;
   font-size: 1rem;
   font-weight: 600;
+  color: var(--md-sys-color-on-surface);
 }
 
 .agenda-hint {
@@ -574,7 +576,7 @@ body.layout-landing .landing-contact-btn.btn-filled {
   padding: 10px 12px;
   border-radius: 12px;
   background: var(--md-sys-color-surface-container-high);
-  border: 1px solid rgba(102, 80, 164, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .day-agenda-row.is-free {
@@ -599,12 +601,12 @@ body.layout-landing .landing-contact-btn.btn-filled {
 }
 
 .day-agenda-row.is-scheduled {
-  border-color: rgba(102, 80, 164, 0.35);
+  border-color: rgba(255, 255, 255, 0.28);
 }
 
 .day-agenda-row.is-progress {
-  border-color: rgba(25, 118, 210, 0.45);
-  background: rgba(25, 118, 210, 0.06);
+  border-color: rgba(100, 181, 246, 0.45);
+  background: rgba(33, 150, 243, 0.1);
 }
 
 .day-agenda-row.is-done {
@@ -665,13 +667,13 @@ body.layout-landing .landing-contact-btn.btn-filled {
 }
 
 .agenda-badge-scheduled {
-  background: rgba(102, 80, 164, 0.2);
+  background: rgba(255, 255, 255, 0.14);
   color: var(--md-sys-color-primary);
 }
 
 .agenda-badge-progress {
-  background: rgba(25, 118, 210, 0.2);
-  color: #1565c0;
+  background: rgba(100, 181, 246, 0.22);
+  color: #90caf9;
 }
 
 .agenda-badge-done {
@@ -707,15 +709,19 @@ body.layout-landing .landing-contact-btn.btn-filled {
 }
 
 input[type="text"],
+input[type="email"],
+input[type="password"],
 input[type="tel"],
 input[type="date"],
 input[type="number"],
-select {
+input[type="search"],
+select,
+textarea {
   width: 100%;
   padding: 14px 16px;
   border-radius: 12px;
   border: 1px solid var(--md-sys-color-outline);
-  background: var(--md-sys-color-surface);
+  background: var(--md-sys-color-surface-container);
   font-family: inherit;
   font-size: 1rem;
   color: inherit;
@@ -748,11 +754,11 @@ select:focus {
 .btn-filled {
   background: var(--md-sys-color-primary);
   color: var(--md-sys-color-on-primary);
-  box-shadow: 0 2px 4px rgba(102, 80, 164, 0.35);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.5);
 }
 
 .btn-filled:hover {
-  filter: brightness(1.05);
+  filter: brightness(0.94);
   transform: translateY(-1px);
 }
 
@@ -767,7 +773,7 @@ select:focus {
 }
 
 .btn-outline:hover {
-  background: rgba(102, 80, 164, 0.08);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .btn-sm {
@@ -793,7 +799,7 @@ select:focus {
 .login-card {
   margin-top: 24px;
   padding-top: 20px;
-  border-top: 1px solid rgba(102, 80, 164, 0.15);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .landing-login-actions {
@@ -803,7 +809,7 @@ select:focus {
 .find-stub {
   margin-top: 20px;
   padding-top: 16px;
-  border-top: 1px solid rgba(102, 80, 164, 0.15);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .find-stub .btn {
@@ -858,7 +864,7 @@ select:focus {
   width: 100%;
   padding: 14px 16px;
   border-radius: 14px;
-  border: 1px solid rgba(102, 80, 164, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   background: var(--md-sys-color-surface-container);
   cursor: pointer;
   text-align: left;
@@ -868,8 +874,8 @@ select:focus {
 
 .find-shop-result-btn:hover {
   background: var(--md-sys-color-surface-container-high);
-  border-color: rgba(102, 80, 164, 0.45);
-  box-shadow: 0 2px 8px rgba(102, 80, 164, 0.1);
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.08);
 }
 
 .find-shop-result-btn strong {
@@ -894,7 +900,7 @@ select:focus {
   gap: 12px;
   margin: 16px 0 8px;
   padding-top: 16px;
-  border-top: 1px solid rgba(102, 80, 164, 0.12);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .find-shop-radius-field {
@@ -1022,7 +1028,7 @@ select:focus {
   padding: 12px 14px;
   border-radius: 12px;
   background: var(--md-sys-color-surface-container-high);
-  border: 1px solid rgba(102, 80, 164, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   font-weight: 500;
 }
 
@@ -1075,7 +1081,7 @@ select:focus {
   padding: 12px 14px;
   border-radius: 12px;
   background: var(--md-sys-color-surface-container-high);
-  border: 1px solid rgba(102, 80, 164, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .owner-service-edit-row .owner-svc-field {
@@ -1134,7 +1140,7 @@ select:focus {
 .owner-agenda-col {
   flex: 1 1 280px;
   max-width: 340px;
-  border: 1px solid rgba(102, 80, 164, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 14px;
   padding: 12px;
   background: var(--md-sys-color-surface-container);
@@ -1174,6 +1180,7 @@ select:focus {
   border-radius: 8px;
   border: 1px solid var(--md-sys-color-outline);
   background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
   cursor: pointer;
 }
 
@@ -1243,7 +1250,7 @@ select:focus {
   padding: 16px 18px;
   border-radius: 16px;
   background: var(--md-sys-color-surface-container-high);
-  border: 1px solid rgba(102, 80, 164, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .owner-barber-card-main {
@@ -1301,7 +1308,7 @@ select:focus {
   padding: 14px 16px;
   border-radius: 14px;
   background: var(--md-sys-color-surface-container);
-  border: 1px solid rgba(102, 80, 164, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .owner-day-edit-card .field {
@@ -1377,8 +1384,8 @@ select:focus {
 }
 
 .btn-ghost:hover {
-  background: rgba(102, 80, 164, 0.08);
-  border-color: rgba(102, 80, 164, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.14);
 }
 
 .grid-3 {
@@ -1423,9 +1430,9 @@ select:focus {
 }
 
 .slot.selected {
-  border-color: var(--md-sys-color-primary);
-  background: rgba(102, 80, 164, 0.12);
-  color: var(--md-sys-color-primary);
+  border-color: #ffffff;
+  background: #ffffff;
+  color: #0a0a0a;
   font-weight: 600;
 }
 
