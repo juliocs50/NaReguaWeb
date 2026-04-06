@@ -29,6 +29,257 @@ body {
   color: var(--md-sys-color-on-surface);
 }
 
+/* Landing: fundo preto / texto claro (hero central + entrar no topo) */
+body.layout-landing {
+  background: #000000;
+  color: #ffffff;
+}
+
+body.layout-landing .site-footer-minimal {
+  display: none;
+}
+
+body.layout-landing .top-bar {
+  background: transparent;
+  box-shadow: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.layout-landing .top-bar-inner {
+  max-width: 1200px;
+  padding: 16px 22px;
+}
+
+body.layout-landing .brand {
+  color: #ffffff;
+}
+
+body.layout-landing .brand-sub {
+  opacity: 0.65;
+}
+
+body.layout-landing .shop-badge {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+body.layout-landing .btn-landing-header-login {
+  background: transparent;
+  color: #ffffff;
+  border: 2px solid rgba(255, 255, 255, 0.88);
+  box-shadow: none;
+  padding: 10px 22px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+body.layout-landing .btn-landing-header-login:hover {
+  background: rgba(255, 255, 255, 0.08);
+  filter: none;
+}
+
+body.layout-landing .btn-login-short {
+  display: none;
+}
+
+@media (max-width: 540px) {
+  body.layout-landing .btn-login-long {
+    display: none;
+  }
+  body.layout-landing .btn-login-short {
+    display: inline;
+  }
+}
+
+body.layout-app .btn-landing-header-login {
+  display: none;
+}
+
+body.layout-landing .main {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+body.layout-landing .landing-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+body.layout-landing .landing-hero-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 96px 24px 40px;
+  max-width: 560px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+body.layout-landing .landing-hero-title {
+  margin: 0 0 16px;
+  font-size: clamp(2rem, 6vw, 3.25rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+  color: #ffffff;
+}
+
+body.layout-landing .landing-hero-tagline {
+  margin: 0 0 36px;
+  font-size: 1.08rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.7);
+  max-width: 420px;
+}
+
+body.layout-landing .btn-landing-hero-cta {
+  background: #ffffff;
+  color: #0a0a0a;
+  border: none;
+  border-radius: 999px;
+  padding: 17px 42px;
+  font-size: 1.06rem;
+  font-weight: 700;
+  box-shadow: 0 10px 40px rgba(255, 255, 255, 0.14);
+  min-width: min(100%, 300px);
+}
+
+body.layout-landing .btn-landing-hero-cta:hover {
+  filter: brightness(0.96);
+  transform: translateY(-2px);
+}
+
+body.layout-landing .landing-panel {
+  max-width: 480px;
+  margin: 0 auto 28px;
+  padding: 26px 22px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+body.layout-landing .landing-panel .subsection-title {
+  color: #ffffff;
+}
+
+body.layout-landing .landing-panel .field-label,
+body.layout-landing .landing-panel .find-shop-intro {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+body.layout-landing .landing-panel input,
+body.layout-landing .landing-panel select {
+  background: rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+}
+
+body.layout-landing .landing-panel .btn-outline {
+  border-color: rgba(255, 255, 255, 0.45);
+  color: #ffffff;
+}
+
+body.layout-landing .landing-panel .btn-outline:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+body.layout-landing .landing-panel .btn-filled {
+  background: #ffffff;
+  color: #0a0a0a;
+  box-shadow: none;
+}
+
+body.layout-landing .landing-footer-info {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  margin-top: auto;
+  padding: 44px 24px 36px;
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+
+body.layout-landing .landing-block-title {
+  color: #ffffff;
+}
+
+body.layout-landing .landing-block p,
+body.layout-landing .landing-contact-hint {
+  color: rgba(255, 255, 255, 0.66);
+}
+
+body.layout-landing .landing-block strong {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+body.layout-landing .landing-copyright {
+  margin: 36px 0 0;
+  text-align: center;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.38);
+}
+
+body.layout-landing .landing-status-msg {
+  text-align: center;
+  padding: 0 24px 20px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+body.layout-landing .landing-status-msg.err {
+  color: #ff8a80;
+}
+
+body.layout-landing .find-shop-status {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+body.layout-landing .find-shop-status.err {
+  color: #ff8a80;
+}
+
+body.layout-landing .find-shop-result-btn {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+
+body.layout-landing .find-shop-result-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+body.layout-landing .find-shop-result-url {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+body.layout-landing .landing-contact-email-line {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+body.layout-landing .landing-contact-btn.btn-filled {
+  background: #ffffff;
+  color: #0a0a0a;
+}
+
 .top-bar {
   background: var(--md-sys-color-primary);
   color: var(--md-sys-color-on-primary);
@@ -63,6 +314,14 @@ body {
   font-size: 0.75rem;
   opacity: 0.9;
   font-weight: 500;
+}
+
+.top-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .shop-badge {

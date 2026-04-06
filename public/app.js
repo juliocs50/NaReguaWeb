@@ -56,6 +56,16 @@ function renderOptions(selectEl, items, getValue, getLabel) {
   }
 }
 
+function setBodyLayout(mode) {
+  document.body.classList.remove("layout-landing", "layout-app");
+  document.body.classList.add(mode === "app" ? "layout-app" : "layout-landing");
+}
+
+function setLandingHeroVisible(visible) {
+  const el = $("landingHeroBlock");
+  if (el) el.hidden = !visible;
+}
+
 function setHomeStatus(msg, isError = false) {
   const el = $("homeStatus");
   if (!el) return;
@@ -762,6 +772,7 @@ async function resolveAndLoad(slug) {
     ? "Escolha data, barbeiro, serviço e horário."
     : "";
   showShopHeader(r.name || "");
+  setBodyLayout("app");
   $("homeLanding").hidden = true;
   $("ownerPortal").hidden = true;
   $("app").hidden = false;
@@ -1318,12 +1329,15 @@ async function resolveOwnerShop(uid) {
 }
 
 function showLandingHome() {
+  setBodyLayout("landing");
   $("homeLanding").hidden = false;
   $("ownerPortal").hidden = true;
   $("app").hidden = true;
+  setLandingHeroVisible(true);
 }
 
 function showOwnerPortalUI() {
+  setBodyLayout("app");
   $("homeLanding").hidden = true;
   $("ownerPortal").hidden = false;
   $("app").hidden = true;
@@ -2103,11 +2117,13 @@ async function init() {
   $("btnLoginShop").addEventListener("click", function () {
     $("loginCard").hidden = false;
     $("findStub").hidden = true;
+    setLandingHeroVisible(false);
     setHomeStatus("");
   });
   $("btnFindShop").addEventListener("click", function () {
     $("findStub").hidden = false;
     $("loginCard").hidden = true;
+    setLandingHeroVisible(false);
     setHomeStatus("");
     setFindShopStatus("");
     const r = $("findShopResults");
@@ -2127,10 +2143,12 @@ async function init() {
   });
   $("ownerLoginCancel").addEventListener("click", function () {
     $("loginCard").hidden = true;
+    setLandingHeroVisible(true);
     setHomeStatus("");
   });
   $("findStubBack").addEventListener("click", function () {
     $("findStub").hidden = true;
+    setLandingHeroVisible(true);
     setFindShopStatus("");
     const res = $("findShopResults");
     if (res) {
@@ -2383,6 +2401,7 @@ async function init() {
         e.message || "Barbearia não encontrada. Verifique o link.",
         true
       );
+      setBodyLayout("landing");
       $("homeLanding").hidden = false;
       $("app").hidden = true;
     }
@@ -2393,6 +2412,7 @@ async function init() {
     try {
       await ensureAnonymousForPublicBooking();
       window.__shopId = queryShopId.trim();
+      setBodyLayout("app");
       $("homeLanding").hidden = true;
       $("ownerPortal").hidden = true;
       $("app").hidden = false;
@@ -2404,12 +2424,14 @@ async function init() {
       await loadData(window.__shopId);
     } catch (e) {
       setHomeStatus(e.message || "Erro ao carregar.", true);
+      setBodyLayout("landing");
       $("homeLanding").hidden = false;
       $("app").hidden = true;
     }
     return;
   }
 
+  setBodyLayout("landing");
   $("homeLanding").hidden = false;
 }
 

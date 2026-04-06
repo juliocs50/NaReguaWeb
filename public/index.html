@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#6650a4" />
+    <meta name="theme-color" content="#000000" />
     <title>Barb x Go</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -18,8 +18,8 @@
     <script src="firebase-config.js"></script>
     <script src="schedule-engine.js"></script>
   </head>
-  <body>
-    <header class="top-bar">
+  <body class="layout-landing">
+    <header class="top-bar" id="siteHeader">
       <div class="top-bar-inner">
         <a href="/" class="brand" id="brandLink">
           <span class="brand-mark">Barb x Go</span>
@@ -27,30 +27,29 @@
         </a>
         <div class="top-bar-right">
           <span id="shopBadge" class="shop-badge" hidden></span>
+          <button type="button" id="btnLoginShop" class="btn btn-landing-header-login">
+            <span class="btn-login-long">Entrar como barbearia</span>
+            <span class="btn-login-short">Entrar</span>
+          </button>
         </div>
       </div>
     </header>
 
     <main class="main">
       <!-- Página inicial: dono ou cliente -->
-      <section id="homeLanding" class="card landing-hero">
-        <p class="landing-kicker">Barb x Go</p>
-        <h1 class="title landing-title">Bem-vindo</h1>
-        <p class="lead landing-lead">
-          Área reservada a <strong>estabelecimentos parceiros</strong> que já utilizam o Barb x Go.
-          Inicie sessão para gerir agenda, equipa, serviços e indicadores num ambiente seguro e
-          dedicado à sua barbearia.
-        </p>
-        <div class="landing-choice-row">
-          <button type="button" id="btnLoginShop" class="btn btn-filled landing-primary-btn">
-            Entrar como barbearia
-          </button>
-          <button type="button" id="btnFindShop" class="btn btn-outline landing-secondary-btn">
+      <section id="homeLanding" class="landing-hero landing-page">
+        <div id="landingHeroBlock" class="landing-hero-center">
+          <h1 class="landing-hero-title">Marque o seu horário.</h1>
+          <p class="landing-hero-tagline">
+            Encontre uma barbearia parceira, veja disponibilidade e confirme o corte ou a barba — simples
+            e direto.
+          </p>
+          <button type="button" id="btnFindShop" class="btn btn-landing-hero-cta">
             Encontrar barbearia
           </button>
         </div>
 
-        <div id="loginCard" class="login-card" hidden>
+        <div id="loginCard" class="login-card landing-panel" hidden>
           <h2 class="subsection-title">Login da barbearia</h2>
           <label class="field">
             <span class="field-label">E-mail</span>
@@ -66,7 +65,7 @@
           </div>
         </div>
 
-        <div id="findStub" class="find-stub card-inner" hidden>
+        <div id="findStub" class="find-stub landing-panel card-inner" hidden>
           <h2 class="subsection-title">Encontrar barbearia</h2>
           <p class="muted find-shop-intro">
             <strong>Por nome:</strong> pelo menos duas letras e <strong>Procurar</strong>.
@@ -105,7 +104,7 @@
           <button type="button" id="findStubBack" class="btn btn-outline find-shop-back">Voltar</button>
         </div>
 
-        <div class="landing-extra">
+        <div class="landing-extra landing-footer-info">
           <section class="landing-block landing-about" aria-labelledby="landing-about-title">
             <h2 class="landing-block-title" id="landing-about-title">Sobre o Barb x Go</h2>
             <p>
@@ -148,9 +147,10 @@
             </p>
             <p class="muted landing-contact-email-line" id="contactCadastroEmailLine" hidden></p>
           </section>
+          <p class="landing-copyright">© Barb x Go</p>
         </div>
 
-        <div id="homeStatus" class="msg" role="status" aria-live="polite"></div>
+        <div id="homeStatus" class="msg landing-status-msg" role="status" aria-live="polite"></div>
       </section>
 
       <!-- Painel do dono (após login) -->
@@ -374,7 +374,7 @@
       </div>
     </div>
 
-    <footer class="footer">
+    <footer class="footer site-footer-minimal">
       <span>Barb x Go</span>
     </footer>
 
