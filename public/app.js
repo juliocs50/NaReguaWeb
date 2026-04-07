@@ -410,6 +410,7 @@ function openOwnerInboxOverlay(open) {
 }
 
 async function loadOwnerInboxPanel() {
+  await initFirebaseCore();
   const shopId = window.__ownerShopId;
   const list = $("ownerInboxList");
   if (!shopId || !list) return;
@@ -431,6 +432,35 @@ async function loadOwnerInboxPanel() {
   }
 
   const lastClosedMillis = getOwnerInboxLastClosedMillis(shopId, barberId);
+
+  const u = firebase.auth().currentUser;
+  if (!u || !u.uid) {
+    list.innerHTML = "";
+    setOwnerStatus("Sessão inválida. Entre novamente.", true);
+    return;
+  }
+  try {
+    const shopSnap = await db.collection("barbershops").doc(shopId).get();
+    const ownerUid = shopSnap.exists ? String((shopSnap.data() || {}).ownerUid || "") : "";
+    if (!ownerUid) {
+      list.innerHTML = "";
+      setOwnerStatus("Barbearia sem ownerUid no Firestore. Refaça o cadastro/login.", true);
+      return;
+    }
+    if (ownerUid !== u.uid) {
+      list.innerHTML = "";
+      setOwnerStatus(
+        "Esta conta não é dona desta barbearia (ownerUid diferente). Faça login com o dono correto.",
+        true
+      );
+      return;
+    }
+  } catch (e) {
+    // Se nem conseguimos ler o doc da barbearia, as rules não estão publicadas ou auth caiu.
+    list.innerHTML = "";
+    setOwnerStatus(e.message || "Erro ao validar a barbearia.", true);
+    return;
+  }
 
   ownerInboxUnsub = db
     .collection("barbershops")
