@@ -450,7 +450,14 @@ async function loadOwnerInboxPanel() {
     if (ownerUid !== u.uid) {
       list.innerHTML = "";
       setOwnerStatus(
-        "Esta conta não é dona desta barbearia (ownerUid diferente). Faça login com o dono correto.",
+        "Esta conta não é dona desta barbearia (ownerUid diferente). " +
+          "shopId=" +
+          shopId +
+          " uid=" +
+          u.uid +
+          " ownerUid=" +
+          ownerUid +
+          ". Faça login com o dono correto ou abra a barbearia certa.",
         true
       );
       return;
