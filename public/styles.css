@@ -1027,6 +1027,38 @@ select:focus {
   background: var(--md-sys-color-surface-container-high);
 }
 
+.shop-location-hint {
+  margin: 0 0 10px;
+  line-height: 1.45;
+}
+
+.shop-location-address {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--md-sys-color-outline);
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  line-height: 1.45;
+  white-space: pre-wrap;
+  user-select: text;
+}
+
+.shop-location-actions {
+  margin-top: 10px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.shop-location-map {
+  width: 100%;
+  height: 220px;
+  margin-top: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--md-sys-color-outline);
+  overflow: hidden;
+  background: var(--md-sys-color-surface-container-high);
+}
+
 .owner-location-note {
   margin-top: 12px;
   font-size: 0.88rem;

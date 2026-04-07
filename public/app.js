@@ -1349,6 +1349,18 @@ async function loadData(shopId) {
   $("dateKey").value = toDateKey();
   await loadAvailability();
 
+  // Localização (cliente): mostrar endereço + ações (copiar/abrir no Maps) e mini-mapa se houver lat/lng.
+  try {
+    const shopSnap = await db.collection("barbershops").doc(shopId).get();
+    const sd = shopSnap.exists ? (shopSnap.data() || {}) : {};
+    const address = sd.address != null ? String(sd.address).trim() : "";
+    const lat = sd.lat != null ? Number(sd.lat) : null;
+    const lng = sd.lng != null ? Number(sd.lng) : null;
+    updateClientShopLocationCard({ shopId: shopId, address: address, lat: lat, lng: lng });
+  } catch (_e) {
+    updateClientShopLocationCard({ shopId: shopId, address: "", lat: null, lng: null });
+  }
+
   let nm = window.__shopName;
   if ((!nm || !String(nm).trim()) && shopId && db) {
     try {
@@ -1364,6 +1376,95 @@ async function loadData(shopId) {
   const appEl = $("app");
   if (appEl && !appEl.hidden) {
     applyBookingHeadlines(nm || "");
+  }
+}
+
+function buildGoogleMapsQueryUrl(address, lat, lng) {
+  const hasLatLng =
+    lat != null && lng != null && isFinite(lat) && isFinite(lng);
+  if (hasLatLng) {
+    return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(lat + "," + lng);
+  }
+  const a = String(address || "").trim();
+  return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(a || "");
+}
+
+function updateClientShopLocationCard(loc) {
+  const card = $("shopLocationCard");
+  if (!card) return;
+  const addrEl = $("shopAddress");
+  const copyBtn = $("copyShopAddressBtn");
+  const mapsLink = $("openShopMapsLink");
+  const mapEl = $("shopLocationMap");
+
+  const address = loc && loc.address ? String(loc.address).trim() : "";
+  const lat = loc && loc.lat != null ? Number(loc.lat) : null;
+  const lng = loc && loc.lng != null ? Number(loc.lng) : null;
+  const hasLatLng = lat != null && lng != null && isFinite(lat) && isFinite(lng);
+
+  // Sem endereço e sem coordenadas: não mostrar.
+  if (!address && !hasLatLng) {
+    card.hidden = true;
+    return;
+  }
+  card.hidden = false;
+  if (addrEl) addrEl.textContent = address || (hasLatLng ? (lat + ", " + lng) : "");
+
+  if (mapsLink) {
+    mapsLink.href = buildGoogleMapsQueryUrl(address, lat, lng);
+  }
+
+  if (copyBtn) {
+    copyBtn.disabled = !address;
+    copyBtn.onclick = function () {
+      const txt = address;
+      if (!txt) return;
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(txt).then(
+            function () {
+              setStatus("Endereço copiado.");
+            },
+            function () {
+              setStatus("Não foi possível copiar.", true);
+            }
+          );
+        } else {
+          throw new Error("clipboard");
+        }
+      } catch (_e) {
+        // Fallback simples: seleção manual
+        setStatus("Copie o endereço manualmente.", true);
+      }
+    };
+  }
+
+  // Mini-mapa opcional (usa a mesma Google Maps JS do painel do dono).
+  if (mapEl) {
+    mapEl.hidden = !hasLatLng;
+  }
+  if (hasLatLng && mapEl) {
+    loadGoogleMapsJs()
+      .then(function () {
+        if (!(window.google && window.google.maps)) return;
+        const center = { lat: lat, lng: lng };
+        const m = new google.maps.Map(mapEl, { center: center, zoom: 16, disableDefaultUI: true });
+        new google.maps.Marker({ position: center, map: m });
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            try {
+              google.maps.event.trigger(m, "resize");
+            } catch (_e) {
+              /* ignore */
+            }
+            m.setCenter(center);
+          });
+        });
+      })
+      .catch(function () {
+        // Se não tiver chave do Maps, só mantém endereço e link.
+        if (mapEl) mapEl.hidden = true;
+      });
   }
 }
 
