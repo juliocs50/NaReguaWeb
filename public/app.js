@@ -11,6 +11,8 @@ const APP_FEE_CENTS = 100;
 const INBOX_SOUND_ENABLED_KEY = "barbxgo_owner_inbox_sound";
 /** Por barbearia + barbeiro: última vez que o painel Log foi fechado (para fundo claro/escuro). */
 const OWNER_INBOX_LAST_CLOSED_PREFIX = "barbxgo_owner_inbox_last_closed_";
+/** Sessão do dono: uid esperado para o painel (evita misturar com anónimo). */
+const OWNER_SESSION_UID_KEY = "naregua_owner_session_uid";
 
 /**
  * Slot vazio depois do horário atual — não usar "Livre".
@@ -27,6 +29,41 @@ let mapsJsLoadPromise = null;
 let ownerLocationMap = null;
 let ownerLocationMarker = null;
 let ownerLocationMarkerUserDragged = false;
+
+function isOwnerPortalActive() {
+  const el = $("ownerPortal");
+  return !!el && !el.hidden;
+}
+
+async function enforceOwnerSessionOrLogout() {
+  if (!isOwnerPortalActive()) return true;
+  await initFirebaseCore();
+  const u = firebase.auth().currentUser;
+  const expected = (localStorage.getItem(OWNER_SESSION_UID_KEY) || "").trim();
+  // Antes do login, não forçar.
+  if (!expected) return true;
+  // Bloquear anónimo ou uid diferente.
+  if (!u || !u.uid || u.isAnonymous || u.uid !== expected) {
+    try {
+      await firebase.auth().signOut();
+    } catch (_e) {
+      /* ignore */
+    }
+    window.__ownerShopId = null;
+    window.__ownerShopName = null;
+    window.__ownerShopPublicUrl = "";
+    window.__ownerShopPathSegment = "";
+    stopOwnerInboxListener();
+    stopOwnerAgendaListener();
+    teardownOwnerLocationMap();
+    setOwnerStatus("Sessão do dono inválida. Entre novamente.", true);
+    showLandingHome();
+    const lc = $("loginCard");
+    if (lc) lc.hidden = false;
+    return false;
+  }
+  return true;
+}
 
 function toDateKey(date = new Date()) {
   const y = date.getFullYear();
@@ -411,6 +448,7 @@ function openOwnerInboxOverlay(open) {
 
 async function loadOwnerInboxPanel() {
   await initFirebaseCore();
+  if (!(await enforceOwnerSessionOrLogout())) return;
   const shopId = window.__ownerShopId;
   const list = $("ownerInboxList");
   if (!shopId || !list) return;
@@ -2258,6 +2296,8 @@ function appendOwnerSlotActions(body, r, shopId) {
 }
 
 async function ownerStartAppointment(shopId, apptId) {
+  await initFirebaseCore();
+  if (!(await enforceOwnerSessionOrLogout())) return;
   const ref = db
     .collection("barbershops")
     .doc(shopId)
@@ -2293,6 +2333,7 @@ async function ownerStartAppointment(shopId, apptId) {
 async function ownerCancelAppointment(shopId, apptId) {
   if (!confirm("Cancelar este agendamento?")) return;
   await initFirebaseCore();
+  if (!(await enforceOwnerSessionOrLogout())) return;
   const u = firebase.auth().currentUser;
   if (!u) {
     throw new Error("Sessão expirada. Entre novamente.");
@@ -2357,6 +2398,8 @@ async function ownerCancelAppointment(shopId, apptId) {
 }
 
 async function ownerFinishAppointment(shopId, apptId, r) {
+  await initFirebaseCore();
+  if (!(await enforceOwnerSessionOrLogout())) return;
   const svc = r.servicePriceCents || 0;
   const fee = r.appFeeCents || 0;
   const total = svc + fee;
@@ -2781,6 +2824,11 @@ async function ownerLoginSubmit() {
     await firebase.auth().signOut();
     await firebase.auth().signInWithEmailAndPassword(email, password);
     const uid = firebase.auth().currentUser.uid;
+    try {
+      localStorage.setItem(OWNER_SESSION_UID_KEY, uid);
+    } catch (_e) {
+      /* ignore */
+    }
 
     // Se veio ?shopId=... na URL, validar que pertence a este dono e usar ele.
     const desiredShopId = (getQueryParam("shopId") || "").trim();
@@ -2829,6 +2877,11 @@ async function ownerLoginSubmit() {
 
 async function ownerLogoutClick() {
   await firebase.auth().signOut();
+  try {
+    localStorage.removeItem(OWNER_SESSION_UID_KEY);
+  } catch (_e) {
+    /* ignore */
+  }
   window.__ownerShopId = null;
   window.__ownerShopName = null;
   window.__ownerShopPublicUrl = "";
