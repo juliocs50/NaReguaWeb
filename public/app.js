@@ -856,6 +856,9 @@ async function loadAvailability() {
   const barberId = $("barberSelect").value;
   if (!shopId || !dateKey || !barberId) return;
 
+  const cancelBtn = $("cancelBtn");
+  if (cancelBtn) cancelBtn.hidden = true;
+
   const slotsEl = $("slots");
   try {
     setStatus("Carregando horários...");
@@ -917,14 +920,79 @@ async function loadAvailability() {
           b.classList.remove("selected");
         });
         btn.classList.add("selected");
+        refreshCancelUi().catch(function () {});
       });
       slotsEl.appendChild(btn);
     });
 
     setStatus("Toque em um horário livre.");
+    refreshCancelUi().catch(function () {});
   } catch (e) {
     slotsEl.innerHTML = "";
     setStatus(e.message || "Erro ao carregar horários.", true);
+  }
+}
+
+async function refreshCancelUi() {
+  const cancelBtn = $("cancelBtn");
+  if (!cancelBtn) return;
+  cancelBtn.hidden = true;
+  const shopId = window.__shopId;
+  const barberId = $("barberSelect").value;
+  const dateKey = $("dateKey").value;
+  const timeLabel = window.__selectedTimeLabel;
+  const u = firebase.auth().currentUser;
+  const uid = u && u.uid ? u.uid : "";
+  if (!shopId || !barberId || !dateKey || !timeLabel || !uid) return;
+  const appointmentId = shopId + "_" + barberId + "_" + dateKey + "_" + timeLabel;
+  try {
+    const ref = db
+      .collection("barbershops")
+      .doc(shopId)
+      .collection("appointments")
+      .doc(appointmentId);
+    const snap = await ref.get();
+    if (!snap.exists) return;
+    const d = snap.data() || {};
+    if ((d.status || "SCHEDULED") !== "SCHEDULED") return;
+    if ((d.createdBy || "") !== "CLIENT") return;
+    if ((d.clientUid || "") !== uid) return;
+    cancelBtn.hidden = false;
+  } catch (_e) {
+    /* ignore */
+  }
+}
+
+async function cancelSelectedAppointment() {
+  const shopId = window.__shopId;
+  const barberId = $("barberSelect").value;
+  const dateKey = $("dateKey").value;
+  const timeLabel = window.__selectedTimeLabel;
+  const u = firebase.auth().currentUser;
+  const uid = u && u.uid ? u.uid : "";
+  if (!shopId || !barberId || !dateKey || !timeLabel || !uid) return;
+  const appointmentId = shopId + "_" + barberId + "_" + dateKey + "_" + timeLabel;
+  const ref = db
+    .collection("barbershops")
+    .doc(shopId)
+    .collection("appointments")
+    .doc(appointmentId);
+  try {
+    const snap = await ref.get();
+    if (!snap.exists) return setStatus("Agendamento não encontrado.", true);
+    const d = snap.data() || {};
+    if ((d.status || "SCHEDULED") !== "SCHEDULED") {
+      return setStatus("Este agendamento já está em atendimento ou finalizado.", true);
+    }
+    if ((d.clientUid || "") !== uid) {
+      return setStatus("Este agendamento só pode ser cancelado no mesmo dispositivo.", true);
+    }
+    await ref.update({ status: "CANCELLED", cancelledAtMillis: Date.now() });
+    setStatus("Agendamento cancelado.");
+    window.__selectedTimeLabel = null;
+    await loadAvailability();
+  } catch (e) {
+    setStatus(e.message || "Não foi possível cancelar.", true);
   }
 }
 
@@ -949,11 +1017,16 @@ async function book() {
   const clientName = $("clientName").value.trim();
   const clientPhone = $("clientPhone").value.trim();
   const service = getSelectedService();
+  const clientUid =
+    firebase.auth().currentUser && firebase.auth().currentUser.uid
+      ? firebase.auth().currentUser.uid
+      : null;
 
   if (!clientName) return setStatus("Informe seu nome.", true);
   if (!clientPhone) return setStatus("Informe seu telefone.", true);
   if (!service) return setStatus("Selecione um serviço.", true);
   if (!timeLabel) return setStatus("Selecione um horário.", true);
+  if (!clientUid) return setStatus("Não foi possível validar a sessão.", true);
   if (window.NaReguaSchedule.isSlotLabelPast(dateKey, timeLabel, new Date())) {
     return setStatus("Este horário já passou. Escolha outro.", true);
   }
@@ -1015,6 +1088,7 @@ async function book() {
         timeLabel: timeLabel,
         clientName: clientName,
         clientPhone: clientPhone,
+        clientUid: clientUid,
         serviceId: service.id,
         serviceName: service.name,
         servicePriceCents: service.priceCents,
@@ -2444,6 +2518,14 @@ async function init() {
       setStatus(e.message || "Erro ao agendar.", true);
     });
   });
+  const cancelBtn = $("cancelBtn");
+  if (cancelBtn) {
+    cancelBtn.addEventListener("click", function () {
+      cancelSelectedAppointment().catch(function (e) {
+        setStatus(e.message || "Erro ao cancelar.", true);
+      });
+    });
+  }
 
   const slugFromPath = getSlugFromPath();
   const queryShopId = getQueryParam("shopId");
