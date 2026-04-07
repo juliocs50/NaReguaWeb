@@ -243,15 +243,20 @@ function setInboxSoundEnabled(v) {
 async function createInboxMessage(shopId, msg) {
   await initFirebaseCore();
   if (!shopId) return;
-  const ref = db.collection("barbershops").doc(shopId).collection("inbox").doc();
-  await ref.set(
-    Object.assign(
-      {
-        createdAtMillis: Date.now(),
-      },
-      msg || {}
-    )
+  const u = firebase.auth().currentUser;
+  const uid = u && u.uid ? u.uid : "";
+  const base = Object.assign(
+    {
+      createdAtMillis: Date.now(),
+      shopId: shopId,
+    },
+    msg || {}
   );
+  // Para regras de escrita do cliente, clientUid precisa existir.
+  // Para o dono, também não atrapalha manter este campo.
+  if (!base.clientUid && uid) base.clientUid = uid;
+  const ref = db.collection("barbershops").doc(shopId).collection("inbox").doc();
+  await ref.set(base);
 }
 
 let ownerInboxUnsub = null;
@@ -335,7 +340,6 @@ async function loadOwnerInboxPanel() {
     .collection("barbershops")
     .doc(shopId)
     .collection("inbox")
-    .where("barberId", "==", barberId)
     .orderBy("createdAtMillis", "desc")
     .limit(50)
     .onSnapshot(
@@ -346,7 +350,10 @@ async function loadOwnerInboxPanel() {
           msgs.push(Object.assign({ id: d.id }, x));
         });
         list.innerHTML = "";
-        if (!msgs.length) {
+        const filtered = msgs.filter(function (m) {
+          return String(m.barberId || "") === barberId;
+        });
+        if (!filtered.length) {
           list.innerHTML = '<p class="muted">Sem mensagens ainda.</p>';
           return;
         }
@@ -354,6 +361,7 @@ async function loadOwnerInboxPanel() {
           .slice()
           .reverse()
           .forEach(function (m) {
+            if (String(m.barberId || "") !== barberId) return;
             list.appendChild(renderOwnerInboxItem(m));
             if (isInboxSoundEnabled()) {
               const t = Number(m.createdAtMillis || 0);
@@ -362,7 +370,7 @@ async function loadOwnerInboxPanel() {
               }
             }
           });
-        const newest = msgs[0];
+        const newest = filtered[0] || msgs[0];
         const newestT = Number((newest && newest.createdAtMillis) || 0);
         if (newestT > ownerInboxLastSeenMillis + 50) {
           if (!ownerInboxOverlayOpen) {
