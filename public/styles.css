@@ -1396,6 +1396,10 @@ select:focus {
   padding: 16px;
 }
 
+.owner-inbox-overlay[hidden] {
+  display: none !important;
+}
+
 .owner-inbox-panel {
   width: min(420px, 100%);
   max-height: min(70vh, 560px);
