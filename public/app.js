@@ -2411,7 +2411,6 @@ async function loadOwnerAgendaPanel() {
   if (!shopId || !board) return;
   const dateKey = dateInput && dateInput.value ? dateInput.value : toDateKey();
   if (dateInput) dateInput.value = dateKey;
-  board.innerHTML = "";
   setOwnerStatus("A carregar agenda…");
   const barbers = await loadBarbers(shopId);
   const selectedId = populateOwnerAgendaBarberSelect(barbers);
@@ -2439,88 +2438,95 @@ async function loadOwnerAgendaPanel() {
   }
 
   const key = shopId + "|" + dateKey + "|" + barber.id;
-  if (ownerAgendaListenerKey !== key) {
-    stopOwnerAgendaListener();
-    ownerAgendaListenerKey = key;
-    ownerAgendaUnsub = db
-      .collection("barbershops")
-      .doc(shopId)
-      .collection("appointments")
-      .where("dateKey", "==", dateKey)
-      .onSnapshot(
-        function (snap) {
-          const allAppts = snap.docs.map(function (doc) {
-            const x = doc.data() || {};
-            return Object.assign({ id: doc.id }, x);
-          });
-
-          board.innerHTML = "";
-          const col = document.createElement("div");
-          col.className = "owner-agenda-col";
-          const head = document.createElement("div");
-          head.className = "owner-agenda-col-head";
-          const h4 = document.createElement("h4");
-          h4.textContent = barber.name;
-          const ed = document.createElement("button");
-          ed.type = "button";
-          ed.className = "btn btn-ghost btn-sm";
-          ed.textContent = "Editar";
-          ed.setAttribute("aria-label", "Editar horários de " + barber.name);
-          ed.addEventListener("click", function () {
-            openOwnerBarberEditModal(barber);
-          });
-          head.appendChild(h4);
-          head.appendChild(ed);
-          col.appendChild(head);
-
-          const delayDiv = document.createElement("div");
-          delayDiv.className = "owner-agenda-delay";
-          [5, 10, 20].forEach(function (dm) {
-            const b = document.createElement("button");
-            b.type = "button";
-            b.textContent = "+" + dm + " min";
-            b.addEventListener("click", function () {
-              addOwnerDelayMinutes(shopId, dateKey, barber.id, dm)
-                .then(function () {
-                  return loadOwnerAgendaPanel();
-                })
-                .catch(function (e) {
-                  setOwnerStatus(e.message || "Erro", true);
-                });
-            });
-            delayDiv.appendChild(b);
-          });
-          col.appendChild(delayDiv);
-
-          const forBarber = allAppts.filter(function (a) {
-            return (
-              a.barberId === barber.id &&
-              (a.status || "SCHEDULED") !== "CANCELLED"
-            );
-          });
-          const rows = window.NaReguaSchedule.buildDayAgendaList(
-            barber.scheduleByDay,
-            dateKey,
-            forBarber,
-            new Date()
-          );
-          const listHost = document.createElement("div");
-          listHost.className = "day-agenda-list";
-          rows.forEach(function (r) {
-            const rowEl = document.createElement("div");
-            renderOwnerAgendaRow(rowEl, r, shopId, barber.id, dateKey, barber);
-            listHost.appendChild(rowEl);
-          });
-          col.appendChild(listHost);
-          board.appendChild(col);
-          setOwnerStatus("");
-        },
-        function (e) {
-          // Não apagar a agenda inteira em caso de falha temporária.
-          setOwnerStatus(e.message || "Erro ao carregar agenda.", true);
-        }
-      );
+  // Se já existe listener para este mesmo dia/barbeiro, NÃO limpar o board.
+  // Caso contrário, quando chamamos loadOwnerAgendaPanel() após uma ação (ex: apagar agendamento),
+  // o board ficava vazio até um próximo evento do Firestore.
+  if (ownerAgendaListenerKey === key && ownerAgendaUnsub) {
+    setOwnerStatus("");
+    return;
   }
+
+  stopOwnerAgendaListener();
+  ownerAgendaListenerKey = key;
+  board.innerHTML = '<p class="muted">A carregar…</p>';
+  ownerAgendaUnsub = db
+    .collection("barbershops")
+    .doc(shopId)
+    .collection("appointments")
+    .where("dateKey", "==", dateKey)
+    .onSnapshot(
+      function (snap) {
+        const allAppts = snap.docs.map(function (doc) {
+          const x = doc.data() || {};
+          return Object.assign({ id: doc.id }, x);
+        });
+
+        board.innerHTML = "";
+        const col = document.createElement("div");
+        col.className = "owner-agenda-col";
+        const head = document.createElement("div");
+        head.className = "owner-agenda-col-head";
+        const h4 = document.createElement("h4");
+        h4.textContent = barber.name;
+        const ed = document.createElement("button");
+        ed.type = "button";
+        ed.className = "btn btn-ghost btn-sm";
+        ed.textContent = "Editar";
+        ed.setAttribute("aria-label", "Editar horários de " + barber.name);
+        ed.addEventListener("click", function () {
+          openOwnerBarberEditModal(barber);
+        });
+        head.appendChild(h4);
+        head.appendChild(ed);
+        col.appendChild(head);
+
+        const delayDiv = document.createElement("div");
+        delayDiv.className = "owner-agenda-delay";
+        [5, 10, 20].forEach(function (dm) {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.textContent = "+" + dm + " min";
+          b.addEventListener("click", function () {
+            addOwnerDelayMinutes(shopId, dateKey, barber.id, dm)
+              .then(function () {
+                return loadOwnerAgendaPanel();
+              })
+              .catch(function (e) {
+                setOwnerStatus(e.message || "Erro", true);
+              });
+          });
+          delayDiv.appendChild(b);
+        });
+        col.appendChild(delayDiv);
+
+        const forBarber = allAppts.filter(function (a) {
+          return (
+            a.barberId === barber.id &&
+            (a.status || "SCHEDULED") !== "CANCELLED"
+          );
+        });
+        const rows = window.NaReguaSchedule.buildDayAgendaList(
+          barber.scheduleByDay,
+          dateKey,
+          forBarber,
+          new Date()
+        );
+        const listHost = document.createElement("div");
+        listHost.className = "day-agenda-list";
+        rows.forEach(function (r) {
+          const rowEl = document.createElement("div");
+          renderOwnerAgendaRow(rowEl, r, shopId, barber.id, dateKey, barber);
+          listHost.appendChild(rowEl);
+        });
+        col.appendChild(listHost);
+        board.appendChild(col);
+        setOwnerStatus("");
+      },
+      function (e) {
+        // Não apagar a agenda inteira em caso de falha temporária.
+        setOwnerStatus(e.message || "Erro ao carregar agenda.", true);
+      }
+    );
 }
 
 function closeOwnerBookModal() {
