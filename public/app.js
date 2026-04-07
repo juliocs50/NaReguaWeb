@@ -260,26 +260,13 @@ async function createInboxMessage(shopId, msg) {
   if (!shopId) return;
   const u = firebase.auth().currentUser;
   const uid = u && u.uid ? u.uid : "";
-  let shopOwnerUid = "";
-  try {
-    const shopSnap = await db.collection("barbershops").doc(shopId).get();
-    if (shopSnap.exists) {
-      const sd = shopSnap.data() || {};
-      shopOwnerUid = sd.ownerUid != null ? String(sd.ownerUid) : "";
-    }
-  } catch (_e) {
-    /* ignore */
-  }
-  if (!shopOwnerUid && uid) shopOwnerUid = uid;
   const base = Object.assign(
     {
       createdAtMillis: Date.now(),
       shopId: shopId,
-      shopOwnerUid: shopOwnerUid,
     },
     msg || {}
   );
-  base.shopOwnerUid = shopOwnerUid;
   // Para regras de escrita do cliente, clientUid precisa existir.
   // Para o dono, também não atrapalha manter este campo.
   if (!base.clientUid && uid) base.clientUid = uid;
@@ -336,6 +323,16 @@ function scrollOwnerInboxListToBottom() {
 
 let ownerAgendaUnsub = null;
 let ownerAgendaListenerKey = "";
+
+/** Listener em tempo real dos agendamentos do dia (página pública do cliente). */
+let clientAppointmentsUnsub = null;
+let clientApptsListenerKey = "";
+
+function stopClientAppointmentsListener() {
+  if (clientAppointmentsUnsub) clientAppointmentsUnsub();
+  clientAppointmentsUnsub = null;
+  clientApptsListenerKey = "";
+}
 
 function stopOwnerInboxListener() {
   if (ownerInboxUnsub) ownerInboxUnsub();
@@ -427,21 +424,11 @@ async function loadOwnerInboxPanel() {
 
   const lastClosedMillis = getOwnerInboxLastClosedMillis(shopId, barberId);
 
-  const ownerUid =
-    firebase.auth().currentUser && firebase.auth().currentUser.uid
-      ? firebase.auth().currentUser.uid
-      : "";
-  if (!ownerUid) {
-    list.innerHTML = '<p class="muted">Sessão inválida. Entre novamente.</p>';
-    return;
-  }
-
-  // Só equality em shopOwnerUid → índice automático (sem composite orderBy).
   ownerInboxUnsub = db
     .collection("barbershops")
     .doc(shopId)
     .collection("inbox")
-    .where("shopOwnerUid", "==", ownerUid)
+    .orderBy("createdAtMillis", "desc")
     .limit(50)
     .onSnapshot(
       function (snap) {
@@ -450,9 +437,7 @@ async function loadOwnerInboxPanel() {
           const x = d.data() || {};
           msgs.push(Object.assign({ id: d.id }, x));
         });
-        msgs.sort(function (a, b) {
-          return Number(a.createdAtMillis || 0) - Number(b.createdAtMillis || 0);
-        });
+        msgs.reverse();
         list.innerHTML = "";
         const filtered = msgs.filter(function (m) {
           return String(m.barberId || "") === barberId;
@@ -963,30 +948,120 @@ async function loadServices(shopId) {
   });
 }
 
-/** Agenda pública: não incluir telefone — só o app do barbeiro exibe. */
-async function appointmentsForDayDetailed(shopId, dateKey) {
-  const snap = await db
-    .collection("barbershops")
-    .doc(shopId)
-    .collection("appointments")
-    .where("dateKey", "==", dateKey)
-    .get();
-  return snap.docs.map(function (doc) {
-    const x = doc.data();
-    return {
-      id: doc.id,
-      barberId: x.barberId || "",
-      timeLabel: x.timeLabel || "",
-      status: x.status || "SCHEDULED",
-      clientName: x.clientName || "",
-      clientUid: x.clientUid || "",
-      serviceName: x.serviceName || "",
-      serviceId: x.serviceId || "",
-      servicePriceCents: (x.servicePriceCents != null ? Number(x.servicePriceCents) : 0),
-      appFeeCents: (x.appFeeCents != null ? Number(x.appFeeCents) : 0),
-      createdBy: x.createdBy || "CLIENT",
-    };
+function appointmentFromFirestoreDoc(doc) {
+  const x = doc.data() || {};
+  return {
+    id: doc.id,
+    barberId: x.barberId || "",
+    timeLabel: x.timeLabel || "",
+    status: x.status || "SCHEDULED",
+    clientName: x.clientName || "",
+    clientUid: x.clientUid || "",
+    serviceName: x.serviceName || "",
+    serviceId: x.serviceId || "",
+    servicePriceCents: x.servicePriceCents != null ? Number(x.servicePriceCents) : 0,
+    appFeeCents: x.appFeeCents != null ? Number(x.appFeeCents) : 0,
+    createdBy: x.createdBy || "CLIENT",
+  };
+}
+
+function renderClientAvailabilityFromAppts(appts, shopId, dateKey, barberId) {
+  const slotsEl = $("slots");
+  const cancelBtn = $("cancelBtn");
+  if (cancelBtn) {
+    cancelBtn.hidden = true;
+    cancelBtn.dataset.appointmentId = "";
+  }
+
+  const barber = (window.__barbers || []).find(function (b) {
+    return b.id === barberId;
   });
+  if (!barber) {
+    if (slotsEl) slotsEl.innerHTML = "";
+    setStatus("Barbeiro inválido.", true);
+    return;
+  }
+
+  const taken = new Set();
+  appts.forEach(function (a) {
+    if (a.barberId === barberId && a.status !== "CANCELLED") {
+      taken.add(a.timeLabel);
+    }
+  });
+
+  const forBarber = appts.filter(function (a) {
+    return a.barberId === barberId && a.status !== "CANCELLED";
+  });
+  renderDayAgenda(barber, dateKey, forBarber);
+
+  const rawSlots = window.NaReguaSchedule.availableSlotLabels(
+    barber.scheduleByDay,
+    dateKey,
+    taken
+  );
+  const now = new Date();
+  let slots = rawSlots.filter(function (t) {
+    return !window.NaReguaSchedule.isSlotLabelPast(dateKey, t, now);
+  });
+
+  if (!slotsEl) return;
+  slotsEl.innerHTML = "";
+  window.__selectedTimeLabel = null;
+
+  if (!slots.length) {
+    if (rawSlots.length) {
+      slotsEl.innerHTML =
+        '<p class="muted">Os horários deste dia para este barbeiro já passaram. Tente amanhã ou outro dia.</p>';
+      setStatus("Sem horários futuros para marcar neste dia.");
+    } else {
+      slotsEl.innerHTML =
+        '<p class="muted">Sem horários livres neste dia para este barbeiro.</p>';
+      setStatus("Escolha outra data ou outro barbeiro.");
+    }
+    refreshCancelUi().catch(function () {});
+    return;
+  }
+
+  slots.forEach(function (t) {
+    const btn = document.createElement("button");
+    btn.className = "slot";
+    btn.type = "button";
+    btn.textContent = t;
+    btn.addEventListener("click", function () {
+      window.__selectedTimeLabel = t;
+      slotsEl.querySelectorAll(".slot").forEach(function (b) {
+        b.classList.remove("selected");
+      });
+      btn.classList.add("selected");
+      refreshCancelUi().catch(function () {});
+    });
+    slotsEl.appendChild(btn);
+  });
+
+  setStatus("Toque em um horário livre.");
+  try {
+    const uid =
+      firebase.auth().currentUser && firebase.auth().currentUser.uid
+        ? firebase.auth().currentUser.uid
+        : "";
+    if (uid && cancelBtn) {
+      const mine = appts.find(function (a) {
+        return (
+          a.barberId === barberId &&
+          (a.status || "SCHEDULED") === "SCHEDULED" &&
+          (a.createdBy || "CLIENT") === "CLIENT" &&
+          (a.clientUid || "") === uid
+        );
+      });
+      if (mine && mine.id) {
+        cancelBtn.hidden = false;
+        cancelBtn.dataset.appointmentId = mine.id;
+      }
+    }
+  } catch (_e) {
+    /* ignore */
+  }
+  refreshCancelUi().catch(function () {});
 }
 
 function renderDayAgenda(barber, dateKey, appointmentsForBarber) {
@@ -1142,6 +1217,8 @@ async function resolveAndLoad(slug) {
 }
 
 async function loadData(shopId) {
+  stopClientAppointmentsListener();
+  clientApptsListenerKey = "";
   const barbers = await loadBarbers(shopId);
   const services = await loadServices(shopId);
 
@@ -1191,112 +1268,44 @@ async function loadData(shopId) {
 }
 
 async function loadAvailability() {
+  await initFirebaseCore();
   const shopId = window.__shopId;
   const dateKey = $("dateKey").value;
   const barberId = $("barberSelect").value;
   if (!shopId || !dateKey || !barberId) return;
 
-  const cancelBtn = $("cancelBtn");
-  if (cancelBtn) {
-    cancelBtn.hidden = true;
-    cancelBtn.dataset.appointmentId = "";
-  }
+  setStatus("Carregando horários...");
 
-  const slotsEl = $("slots");
-  try {
-    setStatus("Carregando horários...");
-    const barber = (window.__barbers || []).find(function (b) {
-      return b.id === barberId;
-    });
-    if (!barber) {
-      setStatus("Barbeiro inválido.", true);
-      return;
-    }
-
-    const appts = await appointmentsForDayDetailed(shopId, dateKey);
-    const taken = new Set();
-    appts.forEach(function (a) {
-      if (a.barberId === barberId && a.status !== "CANCELLED") {
-        taken.add(a.timeLabel);
-      }
-    });
-
-    const forBarber = appts.filter(function (a) {
-      return a.barberId === barberId && a.status !== "CANCELLED";
-    });
-    renderDayAgenda(barber, dateKey, forBarber);
-
-    const rawSlots = window.NaReguaSchedule.availableSlotLabels(
-      barber.scheduleByDay,
-      dateKey,
-      taken
-    );
-    const now = new Date();
-    let slots = rawSlots.filter(function (t) {
-      return !window.NaReguaSchedule.isSlotLabelPast(dateKey, t, now);
-    });
-
-    slotsEl.innerHTML = "";
-    window.__selectedTimeLabel = null;
-
-    if (!slots.length) {
-      if (rawSlots.length) {
-        slotsEl.innerHTML =
-          '<p class="muted">Os horários deste dia para este barbeiro já passaram. Tente amanhã ou outro dia.</p>';
-        setStatus("Sem horários futuros para marcar neste dia.");
-      } else {
-        slotsEl.innerHTML =
-          '<p class="muted">Sem horários livres neste dia para este barbeiro.</p>';
-        setStatus("Escolha outra data ou outro barbeiro.");
-      }
-      return;
-    }
-
-    slots.forEach(function (t) {
-      const btn = document.createElement("button");
-      btn.className = "slot";
-      btn.type = "button";
-      btn.textContent = t;
-      btn.addEventListener("click", function () {
-        window.__selectedTimeLabel = t;
-        slotsEl.querySelectorAll(".slot").forEach(function (b) {
-          b.classList.remove("selected");
-        });
-        btn.classList.add("selected");
-        refreshCancelUi().catch(function () {});
-      });
-      slotsEl.appendChild(btn);
-    });
-
-    setStatus("Toque em um horário livre.");
-    // Se o cliente já tem um agendamento (feito neste dispositivo), mostrar botão de cancelar
-    // mesmo que o horário não apareça mais como "livre".
-    try {
-      const uid =
-        firebase.auth().currentUser && firebase.auth().currentUser.uid
-          ? firebase.auth().currentUser.uid
-          : "";
-      if (uid && cancelBtn) {
-        const mine = appts.find(function (a) {
-          return (
-            a.barberId === barberId &&
-            (a.status || "SCHEDULED") === "SCHEDULED" &&
-            (a.createdBy || "CLIENT") === "CLIENT" &&
-            (a.clientUid || "") === uid
-          );
-        });
-        if (mine && mine.id) {
-          cancelBtn.hidden = false;
-          cancelBtn.dataset.appointmentId = mine.id;
+  const key = shopId + "|" + dateKey;
+  if (clientApptsListenerKey !== key) {
+    stopClientAppointmentsListener();
+    clientApptsListenerKey = key;
+    clientAppointmentsUnsub = db
+      .collection("barbershops")
+      .doc(shopId)
+      .collection("appointments")
+      .where("dateKey", "==", dateKey)
+      .onSnapshot(
+        function (snap) {
+          const appts = snap.docs.map(appointmentFromFirestoreDoc);
+          window.__clientDayAppts = appts;
+          const bid = $("barberSelect").value;
+          const dk = $("dateKey").value;
+          if (dk !== dateKey || window.__shopId !== shopId) return;
+          renderClientAvailabilityFromAppts(appts, shopId, dateKey, bid);
+        },
+        function (e) {
+          setStatus(e.message || "Erro ao carregar horários.", true);
         }
-      }
-    } catch (_e) {
-      /* ignore */
-    }
-    refreshCancelUi().catch(function () {});
-  } catch (e) {
-    slotsEl.innerHTML = "";
-    setStatus(e.message || "Erro ao carregar horários.", true);
+      );
+  } else {
+    window.__clientDayAppts = window.__clientDayAppts || [];
+    renderClientAvailabilityFromAppts(
+      window.__clientDayAppts,
+      shopId,
+      dateKey,
+      barberId
+    );
   }
 }
 
@@ -1895,6 +1904,8 @@ async function resolveOwnerShop(uid) {
 }
 
 function showLandingHome() {
+  stopClientAppointmentsListener();
+  clientApptsListenerKey = "";
   setBodyLayout("landing");
   document.title = "Barb x Go";
   $("homeLanding").hidden = false;
