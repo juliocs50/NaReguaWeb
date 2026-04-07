@@ -497,7 +497,7 @@ async function loadOwnerInboxPanel() {
         if (code === "failed-precondition" || /index/i.test(msg)) {
           msg =
             "Falta índice no Firestore para o log (shopOwnerUid + createdAtMillis). " +
-            "Abra o link que o consola do browser mostra ou faça deploy de firestore.indexes.json.";
+            "Abra o link que o console do browser mostra ou faça deploy de firestore.indexes.json.";
         }
         setOwnerStatus(msg, true);
       }
