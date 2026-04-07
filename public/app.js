@@ -522,11 +522,14 @@ async function loadOwnerInboxPanel() {
         if (code === "permission-denied") {
           const u = firebase.auth().currentUser;
           const uid = u && u.uid ? u.uid : "";
+          const sid = String(window.__ownerShopId || "");
           setOwnerStatus(
             "permission-denied ao ler Log. " +
-              "Verifique se você publicou as rules no Firestore Console do projeto naregua-61564 " +
-              "e se o ownerUid da barbearia é este uid: " +
-              (uid || "(sem sessão)"),
+              "shopId=" +
+              (sid || "(vazio)") +
+              " uid=" +
+              (uid || "(sem sessão)") +
+              ". Se uid == ownerUid no doc barbershops/{shopId} e mesmo assim falha, então as rules publicadas no Console não são estas do arquivo.",
             true
           );
           return;
@@ -2302,8 +2305,29 @@ async function ownerCancelAppointment(shopId, apptId) {
   } catch (e) {
     const code = e && e.code ? String(e.code) : "";
     const msg = e && e.message ? String(e.message) : "Erro ao cancelar.";
-    // Dica prática quando a regra isOwner não está a bater (ownerUid diferente / rules não publicadas).
-    setOwnerStatus((code ? code + " — " : "") + msg, true);
+    if (code === "permission-denied") {
+      const uid = u && u.uid ? String(u.uid) : "";
+      let ownerUid = "";
+      try {
+        const shopSnap = await db.collection("barbershops").doc(shopId).get();
+        ownerUid = shopSnap.exists ? String((shopSnap.data() || {}).ownerUid || "") : "";
+      } catch (_e) {
+        /* ignore */
+      }
+      setOwnerStatus(
+        "permission-denied ao cancelar. " +
+          "shopId=" +
+          shopId +
+          " uid=" +
+          (uid || "(sem sessão)") +
+          " ownerUid=" +
+          (ownerUid || "(vazio)") +
+          ". Se uid==ownerUid, publique as rules do Firestore Console.",
+        true
+      );
+    } else {
+      setOwnerStatus((code ? code + " — " : "") + msg, true);
+    }
     throw e;
   }
 
