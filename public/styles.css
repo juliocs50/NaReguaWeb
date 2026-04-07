@@ -1208,7 +1208,12 @@ select:focus {
   border-radius: 8px;
   border: 1px solid var(--md-sys-color-outline);
   background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
   cursor: pointer;
+}
+
+.owner-agenda-delay button:hover {
+  background: var(--md-sys-color-surface-container-high);
 }
 
 .owner-slot-actions {
