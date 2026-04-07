@@ -345,6 +345,14 @@ function stopOwnerAgendaListener() {
   ownerAgendaListenerKey = "";
 }
 
+function clearOwnerStatusIfLoading() {
+  const el = $("ownerStatus");
+  if (!el) return;
+  const t = (el.textContent || "").trim();
+  if (!t) return;
+  if (t === "A carregar…" || t === "A carregar agenda…") setOwnerStatus("");
+}
+
 function renderOwnerInboxItem(msg, lastClosedMillis) {
   const wrap = document.createElement("div");
   wrap.className = "owner-inbox-item";
@@ -2565,7 +2573,9 @@ async function loadOwnerAgendaPanel() {
         });
         col.appendChild(listHost);
         board.appendChild(col);
-        setOwnerStatus("");
+        // Não limpar mensagens de sucesso/erro (ex: "Agendamento cancelado.") imediatamente.
+        // Só remove o "A carregar…" quando a primeira snapshot chega.
+        clearOwnerStatusIfLoading();
       },
       function (e) {
         // Não apagar a agenda inteira em caso de falha temporária.
