@@ -436,12 +436,12 @@ async function loadOwnerInboxPanel() {
     return;
   }
 
+  // Só equality em shopOwnerUid → índice automático (sem composite orderBy).
   ownerInboxUnsub = db
     .collection("barbershops")
     .doc(shopId)
     .collection("inbox")
     .where("shopOwnerUid", "==", ownerUid)
-    .orderBy("createdAtMillis", "desc")
     .limit(50)
     .onSnapshot(
       function (snap) {
@@ -449,6 +449,9 @@ async function loadOwnerInboxPanel() {
         snap.forEach(function (d) {
           const x = d.data() || {};
           msgs.push(Object.assign({ id: d.id }, x));
+        });
+        msgs.sort(function (a, b) {
+          return Number(a.createdAtMillis || 0) - Number(b.createdAtMillis || 0);
         });
         list.innerHTML = "";
         const filtered = msgs.filter(function (m) {
@@ -461,21 +464,20 @@ async function loadOwnerInboxPanel() {
           }
           return;
         }
-        msgs
-          .slice()
-          .reverse()
-          .forEach(function (m) {
-            if (String(m.barberId || "") !== barberId) return;
-            list.appendChild(renderOwnerInboxItem(m, lastClosedMillis));
-            if (isInboxSoundEnabled()) {
-              const t = Number(m.createdAtMillis || 0);
-              if (t > ownerInboxLastSeenMillis + 50 && ownerInboxOverlayOpen) {
-                playInboxBeep();
-              }
+        filtered.forEach(function (m) {
+          list.appendChild(renderOwnerInboxItem(m, lastClosedMillis));
+          if (isInboxSoundEnabled()) {
+            const t = Number(m.createdAtMillis || 0);
+            if (t > ownerInboxLastSeenMillis + 50 && ownerInboxOverlayOpen) {
+              playInboxBeep();
             }
-          });
-        const newest = filtered[0] || msgs[0];
-        const newestT = Number((newest && newest.createdAtMillis) || 0);
+          }
+        });
+        let newestT = 0;
+        filtered.forEach(function (m) {
+          const t = Number(m.createdAtMillis || 0);
+          if (t > newestT) newestT = t;
+        });
         if (newestT > ownerInboxLastSeenMillis + 50) {
           if (!ownerInboxOverlayOpen) {
             ownerInboxUnread += 1;
@@ -492,14 +494,7 @@ async function loadOwnerInboxPanel() {
       function (e) {
         list.innerHTML = "";
         ownerInboxScrollToBottomPending = false;
-        const code = e && e.code ? String(e.code) : "";
-        let msg = e.message || "Erro ao carregar mensagens.";
-        if (code === "failed-precondition" || /index/i.test(msg)) {
-          msg =
-            "Falta índice no Firestore para o log (shopOwnerUid + createdAtMillis). " +
-            "Abra o link que o console do browser mostra ou faça deploy de firestore.indexes.json.";
-        }
-        setOwnerStatus(msg, true);
+        setOwnerStatus(e.message || "Erro ao carregar mensagens.", true);
       }
     );
 }
