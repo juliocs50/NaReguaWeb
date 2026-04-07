@@ -135,7 +135,6 @@
           <button type="button" class="owner-tab" data-owner-tab="menu">Serviço</button>
           <button type="button" class="owner-tab" data-owner-tab="finance">Finanças</button>
           <button type="button" class="owner-tab" data-owner-tab="location">Localização</button>
-          <button type="button" class="owner-tab" data-owner-tab="inbox">Mensagens</button>
         </nav>
 
         <div id="ownerPanelBarbers" class="owner-panel card" data-panel="barbers">
@@ -227,23 +226,35 @@
           <p id="ownerLocationNote" class="muted owner-location-note" role="status"></p>
         </div>
 
-        <div id="ownerPanelInbox" class="owner-panel card" data-panel="inbox" hidden>
-          <h3 class="subsection-title">Mensagens</h3>
-          <p class="muted owner-inbox-hint">
-            Log em tempo real de agendamentos e ações na agenda.
-          </p>
-          <div class="row owner-inbox-actions">
-            <button type="button" id="ownerInboxSoundBtn" class="btn btn-outline btn-sm">
-              Ativar som
-            </button>
-            <button type="button" id="ownerInboxClearBtn" class="btn btn-outline btn-sm">
-              Limpar visualização
-            </button>
-          </div>
-          <div id="ownerInboxList" class="owner-inbox-list"></div>
-        </div>
-
         <div id="ownerStatus" class="msg" role="status"></div>
+
+        <!-- Log flutuante (apenas na aba Agenda) -->
+        <button
+          type="button"
+          id="ownerInboxFab"
+          class="owner-inbox-fab"
+          aria-label="Abrir log"
+          hidden
+        >
+          Log
+          <span id="ownerInboxBadge" class="owner-inbox-badge" hidden></span>
+        </button>
+        <div id="ownerInboxOverlay" class="owner-inbox-overlay" hidden>
+          <div class="owner-inbox-panel" role="dialog" aria-modal="true" aria-label="Log">
+            <div class="owner-inbox-panel-head">
+              <strong>Log</strong>
+              <div class="row owner-inbox-actions">
+                <button type="button" id="ownerInboxSoundBtn" class="btn btn-outline btn-sm">
+                  Ativar som
+                </button>
+                <button type="button" id="ownerInboxCloseBtn" class="btn btn-outline btn-sm">
+                  Fechar
+                </button>
+              </div>
+            </div>
+            <div id="ownerInboxList" class="owner-inbox-list"></div>
+          </div>
+        </div>
       </section>
 
       <!-- Agendamento cliente (link /slug) -->

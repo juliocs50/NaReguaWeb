@@ -256,6 +256,8 @@ async function createInboxMessage(shopId, msg) {
 
 let ownerInboxUnsub = null;
 let ownerInboxLastSeenMillis = 0;
+let ownerInboxUnread = 0;
+let ownerInboxOverlayOpen = false;
 
 function stopOwnerInboxListener() {
   if (ownerInboxUnsub) ownerInboxUnsub();
@@ -283,6 +285,31 @@ function renderOwnerInboxItem(msg) {
   return wrap;
 }
 
+function setOwnerInboxBadge(n) {
+  const b = $("ownerInboxBadge");
+  if (!b) return;
+  const v = Number(n || 0);
+  b.hidden = v <= 0;
+  b.textContent = v > 9 ? "9+" : String(v);
+}
+
+function showOwnerInboxFab(show) {
+  const fab = $("ownerInboxFab");
+  if (!fab) return;
+  fab.hidden = !show;
+}
+
+function openOwnerInboxOverlay(open) {
+  ownerInboxOverlayOpen = !!open;
+  const ov = $("ownerInboxOverlay");
+  if (ov) ov.hidden = !ownerInboxOverlayOpen;
+  if (ownerInboxOverlayOpen) {
+    ownerInboxUnread = 0;
+    setOwnerInboxBadge(0);
+    ownerInboxLastSeenMillis = Date.now();
+  }
+}
+
 async function loadOwnerInboxPanel() {
   const shopId = window.__ownerShopId;
   const list = $("ownerInboxList");
@@ -295,12 +322,20 @@ async function loadOwnerInboxPanel() {
   }
 
   stopOwnerInboxListener();
-  ownerInboxLastSeenMillis = Date.now();
   list.innerHTML = '<p class="muted">A carregar…</p>';
+
+  const sel = $("ownerAgendaBarberSelect");
+  const barberId = sel && sel.value ? String(sel.value) : "";
+  if (!barberId) {
+    list.innerHTML = '<p class="muted">Selecione um barbeiro na aba Agenda.</p>';
+    return;
+  }
+
   ownerInboxUnsub = db
     .collection("barbershops")
     .doc(shopId)
     .collection("inbox")
+    .where("barberId", "==", barberId)
     .orderBy("createdAtMillis", "desc")
     .limit(50)
     .onSnapshot(
@@ -322,16 +357,21 @@ async function loadOwnerInboxPanel() {
             list.appendChild(renderOwnerInboxItem(m));
             if (isInboxSoundEnabled()) {
               const t = Number(m.createdAtMillis || 0);
-              if (t > ownerInboxLastSeenMillis + 50) {
+              if (t > ownerInboxLastSeenMillis + 50 && ownerInboxOverlayOpen) {
                 playInboxBeep();
               }
             }
           });
         const newest = msgs[0];
-        ownerInboxLastSeenMillis = Math.max(
-          ownerInboxLastSeenMillis,
-          Number((newest && newest.createdAtMillis) || 0)
-        );
+        const newestT = Number((newest && newest.createdAtMillis) || 0);
+        if (newestT > ownerInboxLastSeenMillis + 50) {
+          if (!ownerInboxOverlayOpen) {
+            ownerInboxUnread += 1;
+            setOwnerInboxBadge(ownerInboxUnread);
+            if (isInboxSoundEnabled()) playInboxBeep();
+          }
+        }
+        ownerInboxLastSeenMillis = Math.max(ownerInboxLastSeenMillis, newestT);
       },
       function (e) {
         list.innerHTML = "";
@@ -1770,7 +1810,6 @@ function switchOwnerTab(name) {
     menu: $("ownerPanelMenu"),
     finance: $("ownerPanelFinance"),
     location: $("ownerPanelLocation"),
-    inbox: $("ownerPanelInbox"),
   };
   Object.keys(map).forEach(function (k) {
     const el = map[k];
@@ -1778,16 +1817,24 @@ function switchOwnerTab(name) {
   });
   if (name === "barbers") {
     loadOwnerBarbersPanel().catch(function () {});
+    stopOwnerInboxListener();
+    showOwnerInboxFab(false);
   } else if (name === "agenda") {
     loadOwnerAgendaPanel().catch(function () {});
+    showOwnerInboxFab(true);
+    loadOwnerInboxPanel().catch(function () {});
   } else if (name === "menu") {
     loadOwnerMenuPanel().catch(function () {});
+    stopOwnerInboxListener();
+    showOwnerInboxFab(false);
   } else if (name === "finance") {
     loadOwnerFinancePanel().catch(function () {});
+    stopOwnerInboxListener();
+    showOwnerInboxFab(false);
   } else if (name === "location") {
     loadOwnerLocationPanel().catch(function () {});
-  } else if (name === "inbox") {
-    loadOwnerInboxPanel().catch(function () {});
+    stopOwnerInboxListener();
+    showOwnerInboxFab(false);
   }
 }
 
@@ -2024,6 +2071,8 @@ async function ownerStartAppointment(shopId, apptId) {
     .doc(shopId)
     .collection("appointments")
     .doc(apptId);
+  const snap = await ref.get();
+  const d = snap.exists ? (snap.data() || {}) : {};
   await ref.update({
     status: "IN_PROGRESS",
     actualStartAtMillis: Date.now(),
@@ -2035,8 +2084,14 @@ async function ownerStartAppointment(shopId, apptId) {
     await createInboxMessage(shopId, {
       type: "IN_PROGRESS",
       title: "Atendimento iniciado",
-      text: apptId,
+      text:
+        `${d.dateKey || ""} · ${d.timeLabel || ""}\n` +
+        `${d.clientName || ""} · ${d.serviceName || ""}`,
       appointmentId: apptId,
+      barberId: d.barberId || "",
+      dateKey: d.dateKey || "",
+      timeLabel: d.timeLabel || "",
+      clientName: d.clientName || "",
     });
   } catch (_e) {
     /* ignore */
@@ -2055,6 +2110,8 @@ async function ownerCancelAppointment(shopId, apptId) {
     .doc(shopId)
     .collection("appointments")
     .doc(apptId);
+  const snap = await ref.get();
+  const d = snap.exists ? (snap.data() || {}) : {};
   await ref.update({ status: "CANCELLED", cancelledAtMillis: Date.now() });
   await loadOwnerAgendaPanel();
   setOwnerStatus("Agendamento cancelado.");
@@ -2063,8 +2120,14 @@ async function ownerCancelAppointment(shopId, apptId) {
     await createInboxMessage(shopId, {
       type: "CANCELLED_BY_OWNER",
       title: "Cancelamento (barbearia)",
-      text: apptId,
+      text:
+        `${d.dateKey || ""} · ${d.timeLabel || ""}\n` +
+        `${d.clientName || ""} · ${d.serviceName || ""}`,
       appointmentId: apptId,
+      barberId: d.barberId || "",
+      dateKey: d.dateKey || "",
+      timeLabel: d.timeLabel || "",
+      clientName: d.clientName || "",
     });
   } catch (_e) {
     /* ignore */
@@ -2084,6 +2147,8 @@ async function ownerFinishAppointment(shopId, apptId, r) {
     .doc(shopId)
     .collection("appointments")
     .doc(apptId);
+  const snap = await ref.get();
+  const d = snap.exists ? (snap.data() || {}) : {};
   await ref.update({
     status: "DONE",
     actualEndAtMillis: Date.now(),
@@ -2095,8 +2160,14 @@ async function ownerFinishAppointment(shopId, apptId, r) {
     await createInboxMessage(shopId, {
       type: "DONE",
       title: "Atendimento finalizado",
-      text: apptId,
+      text:
+        `${d.dateKey || ""} · ${d.timeLabel || ""}\n` +
+        `${d.clientName || ""} · ${d.serviceName || ""}`,
       appointmentId: apptId,
+      barberId: d.barberId || "",
+      dateKey: d.dateKey || "",
+      timeLabel: d.timeLabel || "",
+      clientName: d.clientName || "",
     });
   } catch (_e) {
     /* ignore */
@@ -2861,13 +2932,23 @@ async function init() {
       if (next) playInboxBeep();
     });
   }
-  const ownerInboxClearBtn = $("ownerInboxClearBtn");
-  if (ownerInboxClearBtn) {
-    ownerInboxClearBtn.addEventListener("click", function () {
-      const list = $("ownerInboxList");
-      if (list) list.innerHTML = "";
-      ownerInboxLastSeenMillis = Date.now();
-      setOwnerStatus("");
+  const ownerInboxFab = $("ownerInboxFab");
+  if (ownerInboxFab) {
+    ownerInboxFab.addEventListener("click", function () {
+      openOwnerInboxOverlay(!ownerInboxOverlayOpen);
+      if (ownerInboxOverlayOpen) loadOwnerInboxPanel().catch(function () {});
+    });
+  }
+  const ownerInboxCloseBtn = $("ownerInboxCloseBtn");
+  if (ownerInboxCloseBtn) {
+    ownerInboxCloseBtn.addEventListener("click", function () {
+      openOwnerInboxOverlay(false);
+    });
+  }
+  const ownerInboxOverlay = $("ownerInboxOverlay");
+  if (ownerInboxOverlay) {
+    ownerInboxOverlay.addEventListener("click", function (ev) {
+      if (ev.target === ownerInboxOverlay) openOwnerInboxOverlay(false);
     });
   }
 
