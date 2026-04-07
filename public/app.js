@@ -107,11 +107,24 @@ function applyBookingHeadlines(shopName) {
   }
 }
 
+let __ownerStatusTimer = null;
 function setOwnerStatus(msg, isError = false) {
   const el = $("ownerStatus");
   if (!el) return;
+  if (__ownerStatusTimer) {
+    clearTimeout(__ownerStatusTimer);
+    __ownerStatusTimer = null;
+  }
   el.textContent = msg || "";
   el.classList.toggle("err", !!isError);
+  // Sucesso some sozinho; erros ficam visíveis.
+  if (!isError && msg) {
+    __ownerStatusTimer = setTimeout(function () {
+      el.textContent = "";
+      el.classList.remove("err");
+      __ownerStatusTimer = null;
+    }, 3500);
+  }
 }
 
 function setStatus(msg, isError = false) {
