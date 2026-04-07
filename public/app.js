@@ -1689,8 +1689,7 @@ async function ownerFinishAppointment(shopId, apptId, r) {
   const total = svc + fee;
   const msg =
     "Total a cobrar: " +
-    priceToBRL(total) +
-    (fee > 0 ? " (inclui taxa app " + priceToBRL(fee) + ")" : "");
+    priceToBRL(total);
   if (!confirm(msg + "\n\nMarcar atendimento como finalizado?")) return;
   const ref = db
     .collection("barbershops")
