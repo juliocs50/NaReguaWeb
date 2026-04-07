@@ -1098,17 +1098,12 @@ async function book() {
     const daySnap = await appointmentsCol
       .where("dateKey", "==", dateKey)
       .get();
-    const wantName = normalizeClientName(clientName);
     daySnap.docs.forEach(function (doc) {
       const d = doc.data();
       const st = d.status || "SCHEDULED";
       if (st === "CANCELLED") return;
       if (d.barberId === barberId && d.timeLabel === timeLabel) {
         throw new Error("Esse horário já foi ocupado.");
-      }
-      const other = normalizeClientName(d.clientName || "");
-      if (wantName && other && wantName === other) {
-        throw new Error("Já existe um agendamento com este nome neste dia.");
       }
     });
 
@@ -1137,17 +1132,19 @@ async function book() {
       });
     });
 
-    // Telefone fica num doc privado (só a barbearia lê).
-    await privateRef.set(
-      {
+    // Telefone fica num doc privado (barbearia lê; cliente só cria).
+    // Se já existir, não sobrescrever para evitar falha de permissão (create vs update).
+    try {
+      await privateRef.create({
         appointmentId: appointmentId,
         shopId: shopId,
         clientUid: clientUid,
         clientPhone: clientPhone,
         createdAtMillis: Date.now(),
-      },
-      { merge: true }
-    );
+      });
+    } catch (_e) {
+      /* ignore */
+    }
 
     $("slots").querySelectorAll(".slot").forEach(function (b) {
       b.disabled = true;
