@@ -668,6 +668,7 @@ async function appointmentsForDayDetailed(shopId, dateKey) {
       timeLabel: x.timeLabel || "",
       status: x.status || "SCHEDULED",
       clientName: x.clientName || "",
+      clientUid: x.clientUid || "",
       serviceName: x.serviceName || "",
       serviceId: x.serviceId || "",
       servicePriceCents: (x.servicePriceCents != null ? Number(x.servicePriceCents) : 0),
@@ -857,7 +858,10 @@ async function loadAvailability() {
   if (!shopId || !dateKey || !barberId) return;
 
   const cancelBtn = $("cancelBtn");
-  if (cancelBtn) cancelBtn.hidden = true;
+  if (cancelBtn) {
+    cancelBtn.hidden = true;
+    cancelBtn.dataset.appointmentId = "";
+  }
 
   const slotsEl = $("slots");
   try {
@@ -926,6 +930,30 @@ async function loadAvailability() {
     });
 
     setStatus("Toque em um horário livre.");
+    // Se o cliente já tem um agendamento (feito neste dispositivo), mostrar botão de cancelar
+    // mesmo que o horário não apareça mais como "livre".
+    try {
+      const uid =
+        firebase.auth().currentUser && firebase.auth().currentUser.uid
+          ? firebase.auth().currentUser.uid
+          : "";
+      if (uid && cancelBtn) {
+        const mine = appts.find(function (a) {
+          return (
+            a.barberId === barberId &&
+            (a.status || "SCHEDULED") === "SCHEDULED" &&
+            (a.createdBy || "CLIENT") === "CLIENT" &&
+            (a.clientUid || "") === uid
+          );
+        });
+        if (mine && mine.id) {
+          cancelBtn.hidden = false;
+          cancelBtn.dataset.appointmentId = mine.id;
+        }
+      }
+    } catch (_e) {
+      /* ignore */
+    }
     refreshCancelUi().catch(function () {});
   } catch (e) {
     slotsEl.innerHTML = "";
@@ -937,6 +965,7 @@ async function refreshCancelUi() {
   const cancelBtn = $("cancelBtn");
   if (!cancelBtn) return;
   cancelBtn.hidden = true;
+  cancelBtn.dataset.appointmentId = "";
   const shopId = window.__shopId;
   const barberId = $("barberSelect").value;
   const dateKey = $("dateKey").value;
@@ -958,6 +987,7 @@ async function refreshCancelUi() {
     if ((d.createdBy || "") !== "CLIENT") return;
     if ((d.clientUid || "") !== uid) return;
     cancelBtn.hidden = false;
+    cancelBtn.dataset.appointmentId = appointmentId;
   } catch (_e) {
     /* ignore */
   }
@@ -970,8 +1000,13 @@ async function cancelSelectedAppointment() {
   const timeLabel = window.__selectedTimeLabel;
   const u = firebase.auth().currentUser;
   const uid = u && u.uid ? u.uid : "";
-  if (!shopId || !barberId || !dateKey || !timeLabel || !uid) return;
-  const appointmentId = shopId + "_" + barberId + "_" + dateKey + "_" + timeLabel;
+  const cancelBtn = $("cancelBtn");
+  const explicitId = cancelBtn && cancelBtn.dataset ? cancelBtn.dataset.appointmentId : "";
+  if (!shopId || !barberId || !dateKey || !uid) return;
+  const appointmentId =
+    explicitId ||
+    (timeLabel ? shopId + "_" + barberId + "_" + dateKey + "_" + timeLabel : "");
+  if (!appointmentId) return;
   const ref = db
     .collection("barbershops")
     .doc(shopId)
