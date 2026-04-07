@@ -1150,6 +1150,16 @@ async function book() {
       b.disabled = true;
     });
     setStatus("Agendamento confirmado no Barb x Go.");
+    // Mostrar cancelar imediatamente (o slot some da lista de "livres").
+    try {
+      const cancelBtn = $("cancelBtn");
+      if (cancelBtn) {
+        cancelBtn.hidden = false;
+        cancelBtn.dataset.appointmentId = appointmentId;
+      }
+    } catch (_e) {
+      /* ignore */
+    }
     await loadAvailability();
   } catch (e) {
     setStatus(e.message || "Não foi possível confirmar.", true);
@@ -1795,12 +1805,17 @@ async function ownerStartAppointment(shopId, apptId) {
 
 async function ownerCancelAppointment(shopId, apptId) {
   if (!confirm("Cancelar este agendamento?")) return;
+  await initFirebaseCore();
+  const u = firebase.auth().currentUser;
+  if (!u) {
+    throw new Error("Sessão expirada. Entre novamente.");
+  }
   const ref = db
     .collection("barbershops")
     .doc(shopId)
     .collection("appointments")
     .doc(apptId);
-  await ref.update({ status: "CANCELLED" });
+  await ref.update({ status: "CANCELLED", cancelledAtMillis: Date.now() });
   await loadOwnerAgendaPanel();
   setOwnerStatus("Agendamento cancelado.");
 }
