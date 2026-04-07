@@ -1052,6 +1052,11 @@ async function book() {
     .collection("barbershops")
     .doc(shopId)
     .collection("appointments");
+  const privateRef = db
+    .collection("barbershops")
+    .doc(shopId)
+    .collection("appointments_private")
+    .doc(appointmentId);
 
   try {
     // Query não pode ir dentro de runTransaction no SDK compat — só DocumentReference.
@@ -1087,7 +1092,6 @@ async function book() {
         dateKey: dateKey,
         timeLabel: timeLabel,
         clientName: clientName,
-        clientPhone: clientPhone,
         clientUid: clientUid,
         serviceId: service.id,
         serviceName: service.name,
@@ -1097,6 +1101,17 @@ async function book() {
         appFeeCents: APP_FEE_CENTS,
       });
     });
+
+    // Telefone fica num doc privado (só a barbearia lê).
+    await privateRef.set(
+      {
+        appointmentId: appointmentId,
+        shopId: shopId,
+        clientPhone: clientPhone,
+        createdAtMillis: Date.now(),
+      },
+      { merge: true }
+    );
 
     $("slots").querySelectorAll(".slot").forEach(function (b) {
       b.disabled = true;
