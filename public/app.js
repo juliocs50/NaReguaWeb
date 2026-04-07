@@ -260,13 +260,26 @@ async function createInboxMessage(shopId, msg) {
   if (!shopId) return;
   const u = firebase.auth().currentUser;
   const uid = u && u.uid ? u.uid : "";
+  let shopOwnerUid = "";
+  try {
+    const shopSnap = await db.collection("barbershops").doc(shopId).get();
+    if (shopSnap.exists) {
+      const sd = shopSnap.data() || {};
+      shopOwnerUid = sd.ownerUid != null ? String(sd.ownerUid) : "";
+    }
+  } catch (_e) {
+    /* ignore */
+  }
+  if (!shopOwnerUid && uid) shopOwnerUid = uid;
   const base = Object.assign(
     {
       createdAtMillis: Date.now(),
       shopId: shopId,
+      shopOwnerUid: shopOwnerUid,
     },
     msg || {}
   );
+  base.shopOwnerUid = shopOwnerUid;
   // Para regras de escrita do cliente, clientUid precisa existir.
   // Para o dono, também não atrapalha manter este campo.
   if (!base.clientUid && uid) base.clientUid = uid;
@@ -414,10 +427,20 @@ async function loadOwnerInboxPanel() {
 
   const lastClosedMillis = getOwnerInboxLastClosedMillis(shopId, barberId);
 
+  const ownerUid =
+    firebase.auth().currentUser && firebase.auth().currentUser.uid
+      ? firebase.auth().currentUser.uid
+      : "";
+  if (!ownerUid) {
+    list.innerHTML = '<p class="muted">Sessão inválida. Entre novamente.</p>';
+    return;
+  }
+
   ownerInboxUnsub = db
     .collection("barbershops")
     .doc(shopId)
     .collection("inbox")
+    .where("shopOwnerUid", "==", ownerUid)
     .orderBy("createdAtMillis", "desc")
     .limit(50)
     .onSnapshot(
@@ -469,7 +492,14 @@ async function loadOwnerInboxPanel() {
       function (e) {
         list.innerHTML = "";
         ownerInboxScrollToBottomPending = false;
-        setOwnerStatus(e.message || "Erro ao carregar mensagens.", true);
+        const code = e && e.code ? String(e.code) : "";
+        let msg = e.message || "Erro ao carregar mensagens.";
+        if (code === "failed-precondition" || /index/i.test(msg)) {
+          msg =
+            "Falta índice no Firestore para o log (shopOwnerUid + createdAtMillis). " +
+            "Abra o link que o consola do browser mostra ou faça deploy de firestore.indexes.json.";
+        }
+        setOwnerStatus(msg, true);
       }
     );
 }
