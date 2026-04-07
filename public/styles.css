@@ -700,6 +700,21 @@ body.layout-landing .landing-contact-btn.btn-filled {
   gap: 8px;
 }
 
+.day-agenda-cancel {
+  margin-left: auto;
+  font-size: 0.75rem;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--md-sys-color-outline);
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
+  cursor: pointer;
+}
+
+.day-agenda-cancel:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .agenda-badge {
   font-size: 0.7rem;
   font-weight: 600;

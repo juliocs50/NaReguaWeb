@@ -693,6 +693,10 @@ function renderDayAgenda(barber, dateKey, appointmentsForBarber) {
       '<p class="muted">Sem grade neste dia (folga ou sem horários cadastrados).</p>';
     return;
   }
+  const uid =
+    firebase.auth().currentUser && firebase.auth().currentUser.uid
+      ? firebase.auth().currentUser.uid
+      : "";
   const list = document.createElement("div");
   list.className = "day-agenda-list";
   rows.forEach(function (r) {
@@ -778,6 +782,30 @@ function renderDayAgenda(barber, dateKey, appointmentsForBarber) {
         svc.className = "day-agenda-service";
         svc.textContent = r.serviceName;
         body.appendChild(svc);
+      }
+
+      // Cancelar (cliente): só se este agendamento foi feito no mesmo dispositivo (Auth anónimo).
+      if (uid && r.appointmentId) {
+        const ap = (appointmentsForBarber || []).find(function (a) {
+          return (a.id || a.appointmentId) === r.appointmentId;
+        });
+        if (
+          ap &&
+          (ap.status || "SCHEDULED") === "SCHEDULED" &&
+          (ap.createdBy || "CLIENT") === "CLIENT" &&
+          (ap.clientUid || "") === uid
+        ) {
+          const cbtn = document.createElement("button");
+          cbtn.type = "button";
+          cbtn.className = "day-agenda-cancel";
+          cbtn.textContent = "Cancelar";
+          cbtn.addEventListener("click", function () {
+            cancelAppointmentById(String(r.appointmentId)).catch(function (e) {
+              setStatus(e.message || "Não foi possível cancelar.", true);
+            });
+          });
+          body.appendChild(cbtn);
+        }
       }
     }
     row.appendChild(time);
@@ -993,6 +1021,31 @@ async function refreshCancelUi() {
   }
 }
 
+async function cancelAppointmentById(appointmentId) {
+  const shopId = window.__shopId;
+  const u = firebase.auth().currentUser;
+  const uid = u && u.uid ? u.uid : "";
+  if (!shopId || !uid || !appointmentId) return;
+  const ref = db
+    .collection("barbershops")
+    .doc(shopId)
+    .collection("appointments")
+    .doc(appointmentId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new Error("Agendamento não encontrado.");
+  const d = snap.data() || {};
+  if ((d.status || "SCHEDULED") !== "SCHEDULED") {
+    throw new Error("Este agendamento já está em atendimento ou finalizado.");
+  }
+  if ((d.clientUid || "") !== uid) {
+    throw new Error("Este agendamento só pode ser cancelado no mesmo dispositivo.");
+  }
+  await ref.update({ status: "CANCELLED", cancelledAtMillis: Date.now() });
+  setStatus("Agendamento cancelado.");
+  window.__selectedTimeLabel = null;
+  await loadAvailability();
+}
+
 async function cancelSelectedAppointment() {
   const shopId = window.__shopId;
   const barberId = $("barberSelect").value;
@@ -1007,25 +1060,8 @@ async function cancelSelectedAppointment() {
     explicitId ||
     (timeLabel ? shopId + "_" + barberId + "_" + dateKey + "_" + timeLabel : "");
   if (!appointmentId) return;
-  const ref = db
-    .collection("barbershops")
-    .doc(shopId)
-    .collection("appointments")
-    .doc(appointmentId);
   try {
-    const snap = await ref.get();
-    if (!snap.exists) return setStatus("Agendamento não encontrado.", true);
-    const d = snap.data() || {};
-    if ((d.status || "SCHEDULED") !== "SCHEDULED") {
-      return setStatus("Este agendamento já está em atendimento ou finalizado.", true);
-    }
-    if ((d.clientUid || "") !== uid) {
-      return setStatus("Este agendamento só pode ser cancelado no mesmo dispositivo.", true);
-    }
-    await ref.update({ status: "CANCELLED", cancelledAtMillis: Date.now() });
-    setStatus("Agendamento cancelado.");
-    window.__selectedTimeLabel = null;
-    await loadAvailability();
+    await cancelAppointmentById(appointmentId);
   } catch (e) {
     setStatus(e.message || "Não foi possível cancelar.", true);
   }
