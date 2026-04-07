@@ -2750,20 +2750,38 @@ async function ownerLoginSubmit() {
     await firebase.auth().signOut();
     await firebase.auth().signInWithEmailAndPassword(email, password);
     const uid = firebase.auth().currentUser.uid;
-    const snap = await db
-      .collection("barbershops")
-      .where("ownerUid", "==", uid)
-      .limit(1)
-      .get();
-    if (snap.empty) {
-      await firebase.auth().signOut();
-      throw new Error(
-        "Nenhuma barbearia ligada a esta conta. O cadastro é feito no aplicativo Barb x Go."
-      );
+
+    // Se veio ?shopId=... na URL, validar que pertence a este dono e usar ele.
+    const desiredShopId = (getQueryParam("shopId") || "").trim();
+    if (desiredShopId) {
+      const shopSnap = await db.collection("barbershops").doc(desiredShopId).get();
+      if (shopSnap.exists) {
+        const d = shopSnap.data() || {};
+        if (String(d.ownerUid || "") === uid) {
+          window.__ownerShopId = shopSnap.id;
+          window.__ownerShopName = d.name || "";
+        } else {
+          throw new Error("Este shopId não pertence a esta conta.");
+        }
+      } else {
+        throw new Error("shopId inválido (barbearia não encontrada).");
+      }
+    } else {
+      const snap = await db
+        .collection("barbershops")
+        .where("ownerUid", "==", uid)
+        .limit(1)
+        .get();
+      if (snap.empty) {
+        await firebase.auth().signOut();
+        throw new Error(
+          "Nenhuma barbearia ligada a esta conta. O cadastro é feito no aplicativo Barb x Go."
+        );
+      }
+      const doc = snap.docs[0];
+      window.__ownerShopId = doc.id;
+      window.__ownerShopName = doc.data().name || "";
     }
-    const doc = snap.docs[0];
-    window.__ownerShopId = doc.id;
-    window.__ownerShopName = doc.data().name || "";
     setHomeStatus("");
     showOwnerPortalUI();
   } catch (e) {
