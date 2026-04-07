@@ -264,9 +264,18 @@ let ownerInboxLastSeenMillis = 0;
 let ownerInboxUnread = 0;
 let ownerInboxOverlayOpen = false;
 
+let ownerAgendaUnsub = null;
+let ownerAgendaListenerKey = "";
+
 function stopOwnerInboxListener() {
   if (ownerInboxUnsub) ownerInboxUnsub();
   ownerInboxUnsub = null;
+}
+
+function stopOwnerAgendaListener() {
+  if (ownerAgendaUnsub) ownerAgendaUnsub();
+  ownerAgendaUnsub = null;
+  ownerAgendaListenerKey = "";
 }
 
 function renderOwnerInboxItem(msg) {
@@ -2332,12 +2341,14 @@ async function loadOwnerAgendaPanel() {
   if (!barbers.length) {
     board.innerHTML = '<p class="muted">Cadastre barbeiros primeiro.</p>';
     setOwnerStatus("");
+    stopOwnerAgendaListener();
     return;
   }
   if (!selectedId) {
     board.innerHTML =
       '<p class="muted">Selecione um barbeiro acima para ver a agenda do dia.</p>';
     setOwnerStatus("");
+    stopOwnerAgendaListener();
     return;
   }
   const barber = barbers.find(function (b) {
@@ -2346,63 +2357,91 @@ async function loadOwnerAgendaPanel() {
   if (!barber) {
     board.innerHTML = '<p class="muted">Barbeiro não encontrado.</p>';
     setOwnerStatus("");
+    stopOwnerAgendaListener();
     return;
   }
-  const allAppts = await appointmentsForDayDetailed(shopId, dateKey);
-  const col = document.createElement("div");
-  col.className = "owner-agenda-col";
-  const head = document.createElement("div");
-  head.className = "owner-agenda-col-head";
-  const h4 = document.createElement("h4");
-  h4.textContent = barber.name;
-  const ed = document.createElement("button");
-  ed.type = "button";
-  ed.className = "btn btn-ghost btn-sm";
-  ed.textContent = "Editar";
-  ed.setAttribute("aria-label", "Editar horários de " + barber.name);
-  ed.addEventListener("click", function () {
-    openOwnerBarberEditModal(barber);
-  });
-  head.appendChild(h4);
-  head.appendChild(ed);
-  col.appendChild(head);
-  const delayDiv = document.createElement("div");
-  delayDiv.className = "owner-agenda-delay";
-  [5, 10, 20].forEach(function (dm) {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.textContent = "+" + dm + " min";
-    b.addEventListener("click", function () {
-      addOwnerDelayMinutes(shopId, dateKey, barber.id, dm)
-        .then(function () {
-          return loadOwnerAgendaPanel();
-        })
-        .catch(function (e) {
-          setOwnerStatus(e.message || "Erro", true);
-        });
-    });
-    delayDiv.appendChild(b);
-  });
-  col.appendChild(delayDiv);
-  const forBarber = allAppts.filter(function (a) {
-    return a.barberId === barber.id && (a.status || "SCHEDULED") !== "CANCELLED";
-  });
-  const rows = window.NaReguaSchedule.buildDayAgendaList(
-    barber.scheduleByDay,
-    dateKey,
-    forBarber,
-    new Date()
-  );
-  const listHost = document.createElement("div");
-  listHost.className = "day-agenda-list";
-  rows.forEach(function (r) {
-    const rowEl = document.createElement("div");
-    renderOwnerAgendaRow(rowEl, r, shopId, barber.id, dateKey, barber);
-    listHost.appendChild(rowEl);
-  });
-  col.appendChild(listHost);
-  board.appendChild(col);
-  setOwnerStatus("");
+
+  const key = shopId + "|" + dateKey + "|" + barber.id;
+  if (ownerAgendaListenerKey !== key) {
+    stopOwnerAgendaListener();
+    ownerAgendaListenerKey = key;
+    ownerAgendaUnsub = db
+      .collection("barbershops")
+      .doc(shopId)
+      .collection("appointments")
+      .where("dateKey", "==", dateKey)
+      .where("barberId", "==", barber.id)
+      .onSnapshot(
+        function (snap) {
+          const allAppts = snap.docs.map(function (doc) {
+            const x = doc.data() || {};
+            return Object.assign({ id: doc.id }, x);
+          });
+
+          board.innerHTML = "";
+          const col = document.createElement("div");
+          col.className = "owner-agenda-col";
+          const head = document.createElement("div");
+          head.className = "owner-agenda-col-head";
+          const h4 = document.createElement("h4");
+          h4.textContent = barber.name;
+          const ed = document.createElement("button");
+          ed.type = "button";
+          ed.className = "btn btn-ghost btn-sm";
+          ed.textContent = "Editar";
+          ed.setAttribute("aria-label", "Editar horários de " + barber.name);
+          ed.addEventListener("click", function () {
+            openOwnerBarberEditModal(barber);
+          });
+          head.appendChild(h4);
+          head.appendChild(ed);
+          col.appendChild(head);
+
+          const delayDiv = document.createElement("div");
+          delayDiv.className = "owner-agenda-delay";
+          [5, 10, 20].forEach(function (dm) {
+            const b = document.createElement("button");
+            b.type = "button";
+            b.textContent = "+" + dm + " min";
+            b.addEventListener("click", function () {
+              addOwnerDelayMinutes(shopId, dateKey, barber.id, dm)
+                .then(function () {
+                  return loadOwnerAgendaPanel();
+                })
+                .catch(function (e) {
+                  setOwnerStatus(e.message || "Erro", true);
+                });
+            });
+            delayDiv.appendChild(b);
+          });
+          col.appendChild(delayDiv);
+
+          const forBarber = allAppts.filter(function (a) {
+            return (a.status || "SCHEDULED") !== "CANCELLED";
+          });
+          const rows = window.NaReguaSchedule.buildDayAgendaList(
+            barber.scheduleByDay,
+            dateKey,
+            forBarber,
+            new Date()
+          );
+          const listHost = document.createElement("div");
+          listHost.className = "day-agenda-list";
+          rows.forEach(function (r) {
+            const rowEl = document.createElement("div");
+            renderOwnerAgendaRow(rowEl, r, shopId, barber.id, dateKey, barber);
+            listHost.appendChild(rowEl);
+          });
+          col.appendChild(listHost);
+          board.appendChild(col);
+          setOwnerStatus("");
+        },
+        function (e) {
+          board.innerHTML = "";
+          setOwnerStatus(e.message || "Erro ao carregar agenda.", true);
+        }
+      );
+  }
 }
 
 function closeOwnerBookModal() {
@@ -2562,6 +2601,8 @@ async function ownerLogoutClick() {
   window.__ownerShopPublicUrl = "";
   window.__ownerShopPathSegment = "";
   teardownOwnerLocationMap();
+  stopOwnerInboxListener();
+  stopOwnerAgendaListener();
   $("ownerPassword").value = "";
   showLandingHome();
   $("loginCard").hidden = true;
@@ -2889,6 +2930,7 @@ async function init() {
         /* ignore */
       }
       loadOwnerAgendaPanel().catch(function () {});
+      loadOwnerInboxPanel().catch(function () {});
     });
   }
 
