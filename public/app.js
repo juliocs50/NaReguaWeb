@@ -2383,7 +2383,6 @@ async function loadOwnerAgendaPanel() {
       .doc(shopId)
       .collection("appointments")
       .where("dateKey", "==", dateKey)
-      .where("barberId", "==", barber.id)
       .onSnapshot(
         function (snap) {
           const allAppts = snap.docs.map(function (doc) {
@@ -2430,7 +2429,10 @@ async function loadOwnerAgendaPanel() {
           col.appendChild(delayDiv);
 
           const forBarber = allAppts.filter(function (a) {
-            return (a.status || "SCHEDULED") !== "CANCELLED";
+            return (
+              a.barberId === barber.id &&
+              (a.status || "SCHEDULED") !== "CANCELLED"
+            );
           });
           const rows = window.NaReguaSchedule.buildDayAgendaList(
             barber.scheduleByDay,
@@ -2450,7 +2452,7 @@ async function loadOwnerAgendaPanel() {
           setOwnerStatus("");
         },
         function (e) {
-          board.innerHTML = "";
+          // Não apagar a agenda inteira em caso de falha temporária.
           setOwnerStatus(e.message || "Erro ao carregar agenda.", true);
         }
       );
