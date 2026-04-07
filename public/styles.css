@@ -120,6 +120,10 @@ body.layout-app .btn-landing-header-login {
   display: none;
 }
 
+body.layout-app .btn-landing-header-link {
+  display: none;
+}
+
 body.layout-landing .main {
   max-width: none;
   margin: 0;
