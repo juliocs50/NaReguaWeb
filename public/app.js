@@ -2203,11 +2203,11 @@ async function ownerStartAppointment(shopId, apptId) {
     .doc(apptId);
   const snap = await ref.get();
   const d = snap.exists ? (snap.data() || {}) : {};
+  setOwnerStatus("A iniciar…");
   await ref.update({
     status: "IN_PROGRESS",
     actualStartAtMillis: Date.now(),
   });
-  await loadOwnerAgendaPanel();
   setOwnerStatus("");
 
   try {
@@ -2242,9 +2242,18 @@ async function ownerCancelAppointment(shopId, apptId) {
     .doc(apptId);
   const snap = await ref.get();
   const d = snap.exists ? (snap.data() || {}) : {};
-  await ref.update({ status: "CANCELLED", cancelledAtMillis: Date.now() });
-  await loadOwnerAgendaPanel();
-  setOwnerStatus("Agendamento cancelado.");
+  try {
+    setOwnerStatus("Cancelando…");
+    await ref.update({ status: "CANCELLED", cancelledAtMillis: Date.now() });
+    // A agenda do dono é em tempo real (onSnapshot). Não recarregar aqui evita “piscar/voltar”.
+    setOwnerStatus("Agendamento cancelado.");
+  } catch (e) {
+    const code = e && e.code ? String(e.code) : "";
+    const msg = e && e.message ? String(e.message) : "Erro ao cancelar.";
+    // Dica prática quando a regra isOwner não está a bater (ownerUid diferente / rules não publicadas).
+    setOwnerStatus((code ? code + " — " : "") + msg, true);
+    throw e;
+  }
 
   try {
     await createInboxMessage(shopId, {
@@ -2279,11 +2288,11 @@ async function ownerFinishAppointment(shopId, apptId, r) {
     .doc(apptId);
   const snap = await ref.get();
   const d = snap.exists ? (snap.data() || {}) : {};
+  setOwnerStatus("A finalizar…");
   await ref.update({
     status: "DONE",
     actualEndAtMillis: Date.now(),
   });
-  await loadOwnerAgendaPanel();
   setOwnerStatus("Atendimento finalizado.");
 
   try {
