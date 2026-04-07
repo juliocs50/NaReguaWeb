@@ -517,7 +517,21 @@ async function loadOwnerInboxPanel() {
       function (e) {
         list.innerHTML = "";
         ownerInboxScrollToBottomPending = false;
-        setOwnerStatus(e.message || "Erro ao carregar mensagens.", true);
+        const code = e && e.code ? String(e.code) : "";
+        const baseMsg = e && e.message ? String(e.message) : "Erro ao carregar mensagens.";
+        if (code === "permission-denied") {
+          const u = firebase.auth().currentUser;
+          const uid = u && u.uid ? u.uid : "";
+          setOwnerStatus(
+            "permission-denied ao ler Log. " +
+              "Verifique se você publicou as rules no Firestore Console do projeto naregua-61564 " +
+              "e se o ownerUid da barbearia é este uid: " +
+              (uid || "(sem sessão)"),
+            true
+          );
+          return;
+        }
+        setOwnerStatus((code ? code + " — " : "") + baseMsg, true);
       }
     );
 }
