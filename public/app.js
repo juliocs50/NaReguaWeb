@@ -821,7 +821,12 @@ async function loadData(shopId) {
     $("serviceSelect"),
     services,
     (s) => s.id,
-    (s) => `${s.name} (${priceToBRL(s.priceCents)})`
+    (s) => {
+      const base = Number(s.priceCents || 0);
+      const fee = Number(APP_FEE_CENTS || 0);
+      const total = base + fee;
+      return `${s.name} (${priceToBRL(total)})`;
+    }
   );
 
   $("dateKey").value = toDateKey();
@@ -930,6 +935,12 @@ function getSelectedService() {
   });
 }
 
+function serviceTotalCents(service) {
+  const base = service && service.priceCents != null ? Number(service.priceCents) : 0;
+  const fee = Number(APP_FEE_CENTS || 0);
+  return base + fee;
+}
+
 async function book() {
   const shopId = window.__shopId;
   const barberId = $("barberSelect").value;
@@ -1016,9 +1027,7 @@ async function book() {
     $("slots").querySelectorAll(".slot").forEach(function (b) {
       b.disabled = true;
     });
-    setStatus(
-      "Agendamento confirmado no Barb x Go. Referência: " + appointmentId + "."
-    );
+    setStatus("Agendamento confirmado no Barb x Go.");
     await loadAvailability();
   } catch (e) {
     setStatus(e.message || "Não foi possível confirmar.", true);
