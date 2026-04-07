@@ -135,6 +135,7 @@
           <button type="button" class="owner-tab" data-owner-tab="menu">Serviço</button>
           <button type="button" class="owner-tab" data-owner-tab="finance">Finanças</button>
           <button type="button" class="owner-tab" data-owner-tab="location">Localização</button>
+          <button type="button" class="owner-tab" data-owner-tab="inbox">Mensagens</button>
         </nav>
 
         <div id="ownerPanelBarbers" class="owner-panel card" data-panel="barbers">
@@ -224,6 +225,22 @@
             Guardar localização
           </button>
           <p id="ownerLocationNote" class="muted owner-location-note" role="status"></p>
+        </div>
+
+        <div id="ownerPanelInbox" class="owner-panel card" data-panel="inbox" hidden>
+          <h3 class="subsection-title">Mensagens</h3>
+          <p class="muted owner-inbox-hint">
+            Log em tempo real de agendamentos e ações na agenda.
+          </p>
+          <div class="row owner-inbox-actions">
+            <button type="button" id="ownerInboxSoundBtn" class="btn btn-outline btn-sm">
+              Ativar som
+            </button>
+            <button type="button" id="ownerInboxClearBtn" class="btn btn-outline btn-sm">
+              Limpar visualização
+            </button>
+          </div>
+          <div id="ownerInboxList" class="owner-inbox-list"></div>
         </div>
 
         <div id="ownerStatus" class="msg" role="status"></div>

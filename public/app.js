@@ -8,6 +8,7 @@
 const $ = (id) => document.getElementById(id);
 
 const APP_FEE_CENTS = 100;
+const INBOX_SOUND_ENABLED_KEY = "barbxgo_owner_inbox_sound";
 
 /**
  * Slot vazio depois do horário atual — não usar "Livre".
@@ -34,6 +35,15 @@ function toDateKey(date = new Date()) {
 
 function getQueryParam(name) {
   return new URL(window.location.href).searchParams.get(name);
+}
+
+function formatShortDateTime(ms) {
+  const d = new Date(ms);
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+  return `${dd}/${mm} ${hh}:${mi}`;
 }
 
 function getSlugFromPath() {
@@ -186,6 +196,148 @@ async function ensureAnonymousForPublicBooking() {
       );
     }
   }
+}
+
+function playInboxBeep() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = "sine";
+    o.frequency.value = 880;
+    g.gain.value = 0.05;
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.start();
+    setTimeout(function () {
+      try {
+        o.stop();
+        ctx.close();
+      } catch (_e) {
+        /* ignore */
+      }
+    }, 180);
+  } catch (_e) {
+    /* ignore */
+  }
+}
+
+function isInboxSoundEnabled() {
+  try {
+    return localStorage.getItem(INBOX_SOUND_ENABLED_KEY) === "1";
+  } catch (_e) {
+    return false;
+  }
+}
+
+function setInboxSoundEnabled(v) {
+  try {
+    localStorage.setItem(INBOX_SOUND_ENABLED_KEY, v ? "1" : "0");
+  } catch (_e) {
+    /* ignore */
+  }
+}
+
+async function createInboxMessage(shopId, msg) {
+  await initFirebaseCore();
+  if (!shopId) return;
+  const ref = db.collection("barbershops").doc(shopId).collection("inbox").doc();
+  await ref.set(
+    Object.assign(
+      {
+        createdAtMillis: Date.now(),
+      },
+      msg || {}
+    )
+  );
+}
+
+let ownerInboxUnsub = null;
+let ownerInboxLastSeenMillis = 0;
+
+function stopOwnerInboxListener() {
+  if (ownerInboxUnsub) ownerInboxUnsub();
+  ownerInboxUnsub = null;
+}
+
+function renderOwnerInboxItem(msg) {
+  const wrap = document.createElement("div");
+  wrap.className = "owner-inbox-item";
+  const head = document.createElement("div");
+  head.className = "owner-inbox-item-head";
+  const title = document.createElement("p");
+  title.className = "owner-inbox-item-title";
+  title.textContent = msg.title || "Mensagem";
+  const time = document.createElement("span");
+  time.className = "owner-inbox-item-time";
+  time.textContent = formatShortDateTime(msg.createdAtMillis || Date.now());
+  head.appendChild(title);
+  head.appendChild(time);
+  const body = document.createElement("div");
+  body.className = "owner-inbox-item-body";
+  body.textContent = msg.text || "";
+  wrap.appendChild(head);
+  wrap.appendChild(body);
+  return wrap;
+}
+
+async function loadOwnerInboxPanel() {
+  const shopId = window.__ownerShopId;
+  const list = $("ownerInboxList");
+  if (!shopId || !list) return;
+  setOwnerStatus("");
+
+  const soundBtn = $("ownerInboxSoundBtn");
+  if (soundBtn) {
+    soundBtn.textContent = isInboxSoundEnabled() ? "Som: ligado" : "Ativar som";
+  }
+
+  stopOwnerInboxListener();
+  ownerInboxLastSeenMillis = Date.now();
+  list.innerHTML = '<p class="muted">A carregar…</p>';
+  ownerInboxUnsub = db
+    .collection("barbershops")
+    .doc(shopId)
+    .collection("inbox")
+    .orderBy("createdAtMillis", "desc")
+    .limit(50)
+    .onSnapshot(
+      function (snap) {
+        const msgs = [];
+        snap.forEach(function (d) {
+          const x = d.data() || {};
+          msgs.push(Object.assign({ id: d.id }, x));
+        });
+        list.innerHTML = "";
+        if (!msgs.length) {
+          list.innerHTML = '<p class="muted">Sem mensagens ainda.</p>';
+          return;
+        }
+        msgs
+          .slice()
+          .reverse()
+          .forEach(function (m) {
+            list.appendChild(renderOwnerInboxItem(m));
+            if (isInboxSoundEnabled()) {
+              const t = Number(m.createdAtMillis || 0);
+              if (t > ownerInboxLastSeenMillis + 50) {
+                playInboxBeep();
+              }
+            }
+          });
+        const newest = msgs[0];
+        ownerInboxLastSeenMillis = Math.max(
+          ownerInboxLastSeenMillis,
+          Number((newest && newest.createdAtMillis) || 0)
+        );
+      },
+      function (e) {
+        list.innerHTML = "";
+        setOwnerStatus(e.message || "Erro ao carregar mensagens.", true);
+      }
+    );
 }
 
 async function resolveShopSlug(slug) {
@@ -1044,6 +1196,25 @@ async function cancelAppointmentById(appointmentId) {
   setStatus("Agendamento cancelado.");
   window.__selectedTimeLabel = null;
   await loadAvailability();
+
+  // Log para a barbearia (cliente)
+  try {
+    await createInboxMessage(shopId, {
+      type: "CANCELLED_BY_CLIENT",
+      title: "Cancelamento (cliente)",
+      text:
+        `${d.dateKey || ""} · ${d.timeLabel || ""}\n` +
+        `${d.clientName || ""} · ${d.serviceName || ""}`,
+      appointmentId: appointmentId,
+      barberId: d.barberId || "",
+      dateKey: d.dateKey || "",
+      timeLabel: d.timeLabel || "",
+      clientName: d.clientName || "",
+      clientUid: uid,
+    });
+  } catch (_e) {
+    /* ignore */
+  }
 }
 
 async function cancelSelectedAppointment() {
@@ -1193,6 +1364,25 @@ async function book() {
         cancelBtn.hidden = false;
         cancelBtn.dataset.appointmentId = appointmentId;
       }
+    } catch (_e) {
+      /* ignore */
+    }
+
+    // Log para a barbearia (cliente)
+    try {
+      await createInboxMessage(shopId, {
+        type: "BOOKED",
+        title: "Novo agendamento",
+        text:
+          `${dateKey} · ${timeLabel}\n` +
+          `${clientName} · ${service.name}`,
+        appointmentId: appointmentId,
+        barberId: barberId,
+        dateKey: dateKey,
+        timeLabel: timeLabel,
+        clientName: clientName,
+        clientUid: clientUid,
+      });
     } catch (_e) {
       /* ignore */
     }
@@ -1580,6 +1770,7 @@ function switchOwnerTab(name) {
     menu: $("ownerPanelMenu"),
     finance: $("ownerPanelFinance"),
     location: $("ownerPanelLocation"),
+    inbox: $("ownerPanelInbox"),
   };
   Object.keys(map).forEach(function (k) {
     const el = map[k];
@@ -1595,6 +1786,8 @@ function switchOwnerTab(name) {
     loadOwnerFinancePanel().catch(function () {});
   } else if (name === "location") {
     loadOwnerLocationPanel().catch(function () {});
+  } else if (name === "inbox") {
+    loadOwnerInboxPanel().catch(function () {});
   }
 }
 
@@ -1837,6 +2030,17 @@ async function ownerStartAppointment(shopId, apptId) {
   });
   await loadOwnerAgendaPanel();
   setOwnerStatus("");
+
+  try {
+    await createInboxMessage(shopId, {
+      type: "IN_PROGRESS",
+      title: "Atendimento iniciado",
+      text: apptId,
+      appointmentId: apptId,
+    });
+  } catch (_e) {
+    /* ignore */
+  }
 }
 
 async function ownerCancelAppointment(shopId, apptId) {
@@ -1854,6 +2058,17 @@ async function ownerCancelAppointment(shopId, apptId) {
   await ref.update({ status: "CANCELLED", cancelledAtMillis: Date.now() });
   await loadOwnerAgendaPanel();
   setOwnerStatus("Agendamento cancelado.");
+
+  try {
+    await createInboxMessage(shopId, {
+      type: "CANCELLED_BY_OWNER",
+      title: "Cancelamento (barbearia)",
+      text: apptId,
+      appointmentId: apptId,
+    });
+  } catch (_e) {
+    /* ignore */
+  }
 }
 
 async function ownerFinishAppointment(shopId, apptId, r) {
@@ -1875,6 +2090,17 @@ async function ownerFinishAppointment(shopId, apptId, r) {
   });
   await loadOwnerAgendaPanel();
   setOwnerStatus("Atendimento finalizado.");
+
+  try {
+    await createInboxMessage(shopId, {
+      type: "DONE",
+      title: "Atendimento finalizado",
+      text: apptId,
+      appointmentId: apptId,
+    });
+  } catch (_e) {
+    /* ignore */
+  }
 }
 
 function renderOwnerAgendaRow(rowEl, r, shopId, barberId, dateKey, barber) {
@@ -2623,6 +2849,25 @@ async function init() {
       cancelSelectedAppointment().catch(function (e) {
         setStatus(e.message || "Erro ao cancelar.", true);
       });
+    });
+  }
+
+  const ownerInboxSoundBtn = $("ownerInboxSoundBtn");
+  if (ownerInboxSoundBtn) {
+    ownerInboxSoundBtn.addEventListener("click", function () {
+      const next = !isInboxSoundEnabled();
+      setInboxSoundEnabled(next);
+      ownerInboxSoundBtn.textContent = next ? "Som: ligado" : "Ativar som";
+      if (next) playInboxBeep();
+    });
+  }
+  const ownerInboxClearBtn = $("ownerInboxClearBtn");
+  if (ownerInboxClearBtn) {
+    ownerInboxClearBtn.addEventListener("click", function () {
+      const list = $("ownerInboxList");
+      if (list) list.innerHTML = "";
+      ownerInboxLastSeenMillis = Date.now();
+      setOwnerStatus("");
     });
   }
 
