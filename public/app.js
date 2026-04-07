@@ -1142,6 +1142,7 @@ async function book() {
       {
         appointmentId: appointmentId,
         shopId: shopId,
+        clientUid: clientUid,
         clientPhone: clientPhone,
         createdAtMillis: Date.now(),
       },
