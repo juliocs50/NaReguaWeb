@@ -1328,6 +1328,19 @@ select:focus {
   background: var(--md-sys-color-surface-container-high);
 }
 
+/* Em cima = mais antigo; já visto (desde a última vez que fechou o log) = mais escuro. */
+.owner-inbox-item--read {
+  background: rgba(30, 30, 32, 0.92);
+  border-color: rgba(255, 255, 255, 0.06);
+  opacity: 0.92;
+}
+
+/* Ainda não “visto” nesta sessão de uso = destaque mais claro. */
+.owner-inbox-item--unread {
+  background: rgba(55, 55, 58, 0.95);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
 .owner-inbox-item-head {
   display: flex;
   flex-wrap: wrap;

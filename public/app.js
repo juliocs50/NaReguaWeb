@@ -9,6 +9,8 @@ const $ = (id) => document.getElementById(id);
 
 const APP_FEE_CENTS = 100;
 const INBOX_SOUND_ENABLED_KEY = "barbxgo_owner_inbox_sound";
+/** Por barbearia + barbeiro: última vez que o painel Log foi fechado (para fundo claro/escuro). */
+const OWNER_INBOX_LAST_CLOSED_PREFIX = "barbxgo_owner_inbox_last_closed_";
 
 /**
  * Slot vazio depois do horário atual — não usar "Livre".
@@ -276,6 +278,48 @@ let ownerInboxUnsub = null;
 let ownerInboxLastSeenMillis = 0;
 let ownerInboxUnread = 0;
 let ownerInboxOverlayOpen = false;
+/** Após abrir o log, rolar uma vez até ao fim (mensagens mais recentes em baixo). */
+let ownerInboxScrollToBottomPending = false;
+
+function ownerInboxLastClosedStorageKey(shopId, barberId) {
+  const s = String(shopId || "").replace(/\|/g, "");
+  const b = String(barberId || "").replace(/\|/g, "");
+  return OWNER_INBOX_LAST_CLOSED_PREFIX + s + "|" + b;
+}
+
+/** Sem histórico → tudo tratado como já visto (fundo mais escuro). Após fechar o painel, grava-se o instante. */
+function getOwnerInboxLastClosedMillis(shopId, barberId) {
+  try {
+    const raw = localStorage.getItem(ownerInboxLastClosedStorageKey(shopId, barberId));
+    if (raw != null && raw !== "") {
+      const n = Number(raw);
+      if (Number.isFinite(n) && n >= 0) return n;
+    }
+  } catch (_e) {
+    /* ignore */
+  }
+  return Number.POSITIVE_INFINITY;
+}
+
+function setOwnerInboxLastClosedNow(shopId, barberId) {
+  if (!shopId || !barberId) return;
+  try {
+    localStorage.setItem(ownerInboxLastClosedStorageKey(shopId, barberId), String(Date.now()));
+  } catch (_e) {
+    /* ignore */
+  }
+}
+
+function scrollOwnerInboxListToBottom() {
+  const list = $("ownerInboxList");
+  if (!list) return;
+  requestAnimationFrame(function () {
+    list.scrollTop = list.scrollHeight;
+    requestAnimationFrame(function () {
+      list.scrollTop = list.scrollHeight;
+    });
+  });
+}
 
 let ownerAgendaUnsub = null;
 let ownerAgendaListenerKey = "";
@@ -291,9 +335,12 @@ function stopOwnerAgendaListener() {
   ownerAgendaListenerKey = "";
 }
 
-function renderOwnerInboxItem(msg) {
+function renderOwnerInboxItem(msg, lastClosedMillis) {
   const wrap = document.createElement("div");
   wrap.className = "owner-inbox-item";
+  const t = Number(msg.createdAtMillis || 0);
+  const unread = Number.isFinite(lastClosedMillis) && t > lastClosedMillis;
+  wrap.classList.add(unread ? "owner-inbox-item--unread" : "owner-inbox-item--read");
   const head = document.createElement("div");
   head.className = "owner-inbox-item-head";
   const title = document.createElement("p");
@@ -327,6 +374,7 @@ function showOwnerInboxFab(show) {
 }
 
 function openOwnerInboxOverlay(open) {
+  const wasOpen = ownerInboxOverlayOpen;
   ownerInboxOverlayOpen = !!open;
   const ov = $("ownerInboxOverlay");
   if (ov) ov.hidden = !ownerInboxOverlayOpen;
@@ -334,6 +382,12 @@ function openOwnerInboxOverlay(open) {
     ownerInboxUnread = 0;
     setOwnerInboxBadge(0);
     ownerInboxLastSeenMillis = Date.now();
+    ownerInboxScrollToBottomPending = true;
+  } else if (wasOpen) {
+    const shopId = window.__ownerShopId;
+    const sel = $("ownerAgendaBarberSelect");
+    const barberId = sel && sel.value ? String(sel.value) : "";
+    setOwnerInboxLastClosedNow(shopId, barberId);
   }
 }
 
@@ -358,6 +412,8 @@ async function loadOwnerInboxPanel() {
     return;
   }
 
+  const lastClosedMillis = getOwnerInboxLastClosedMillis(shopId, barberId);
+
   ownerInboxUnsub = db
     .collection("barbershops")
     .doc(shopId)
@@ -377,6 +433,9 @@ async function loadOwnerInboxPanel() {
         });
         if (!filtered.length) {
           list.innerHTML = '<p class="muted">Sem mensagens ainda.</p>';
+          if (ownerInboxOverlayOpen && ownerInboxScrollToBottomPending) {
+            ownerInboxScrollToBottomPending = false;
+          }
           return;
         }
         msgs
@@ -384,7 +443,7 @@ async function loadOwnerInboxPanel() {
           .reverse()
           .forEach(function (m) {
             if (String(m.barberId || "") !== barberId) return;
-            list.appendChild(renderOwnerInboxItem(m));
+            list.appendChild(renderOwnerInboxItem(m, lastClosedMillis));
             if (isInboxSoundEnabled()) {
               const t = Number(m.createdAtMillis || 0);
               if (t > ownerInboxLastSeenMillis + 50 && ownerInboxOverlayOpen) {
@@ -402,9 +461,14 @@ async function loadOwnerInboxPanel() {
           }
         }
         ownerInboxLastSeenMillis = Math.max(ownerInboxLastSeenMillis, newestT);
+        if (ownerInboxOverlayOpen && ownerInboxScrollToBottomPending) {
+          scrollOwnerInboxListToBottom();
+          ownerInboxScrollToBottomPending = false;
+        }
       },
       function (e) {
         list.innerHTML = "";
+        ownerInboxScrollToBottomPending = false;
         setOwnerStatus(e.message || "Erro ao carregar mensagens.", true);
       }
     );
@@ -2945,6 +3009,7 @@ async function init() {
         /* ignore */
       }
       loadOwnerAgendaPanel().catch(function () {});
+      if (ownerInboxOverlayOpen) ownerInboxScrollToBottomPending = true;
       loadOwnerInboxPanel().catch(function () {});
     });
   }
