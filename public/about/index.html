@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <title>Sobre · Barb x Go</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script src="/firebase-config.js"></script>
+    <script src="/schedule-engine.js"></script>
+  </head>
+  <body class="layout-landing">
+    <header class="top-bar" id="siteHeader">
+      <div class="top-bar-inner">
+        <a href="/" class="brand" id="brandLink">
+          <span class="brand-mark">Barb x Go</span>
+          <span class="brand-sub">agendamento</span>
+        </a>
+        <div class="top-bar-right">
+          <a href="/" class="btn btn-landing-header-link">Início</a>
+          <a href="/#login" id="btnLoginShop" class="btn btn-landing-header-login">
+            <span class="btn-login-long">Entrar como barbearia</span>
+            <span class="btn-login-short">Entrar</span>
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="landing-page about-page">
+        <div class="landing-hero-center about-hero">
+          <h1 class="landing-hero-title">Sobre o Barb x Go</h1>
+          <p class="landing-hero-tagline">Para clientes e barbearias — simples, rápido e organizado.</p>
+          <a href="/" class="btn btn-landing-hero-cta">Voltar</a>
+        </div>
+
+        <div class="landing-extra landing-footer-info about-content">
+          <section class="landing-block landing-about" aria-labelledby="landing-about-title">
+            <h2 class="landing-block-title" id="landing-about-title">Saiba mais</h2>
+            <p>
+              O <strong>Barb x Go</strong> foi pensado para tornar a ida à barbearia mais organizada:
+              menos espera à toa, menos confusão com horários e mais previsibilidade para clientes e para
+              quem trabalha na loja.
+            </p>
+            <p>
+              <strong>Para quem marca corte ou barba:</strong> pode consultar disponibilidade, escolher
+              profissional e serviço e confirmar o horário — muitas vezes diretamente no telemóvel ou
+              pelo link que a própria barbearia partilha, sem precisar de insistir por chamada no último
+              minuto.
+            </p>
+            <p>
+              <strong>Para a barbearia:</strong> reúne num só lugar a agenda do dia, a equipa, o catálogo
+              de serviços e informação útil para acompanhar o movimento. O objetivo é descomplicar o dia
+              a dia da equipa e melhorar a experiência de quem entra pela porta.
+            </p>
+          </section>
+
+          <section class="landing-block landing-contact" aria-labelledby="landing-contact-title">
+            <h2 class="landing-block-title" id="landing-contact-title">Entre em contato</h2>
+            <p>
+              Quer <strong>solicitar o cadastro</strong> da sua barbearia na plataforma ou tirar dúvidas
+              sobre parcerias? Envie-nos um pedido com os seus dados. A nossa equipa analisa e responde
+              o quanto antes.
+            </p>
+            <div class="landing-contact-actions">
+              <a id="contactCadastroLink" class="btn btn-filled landing-contact-btn" href="#">
+                Enviar pedido por e-mail
+              </a>
+            </div>
+            <p class="hint landing-contact-hint">
+              Ao clicar, abre-se o seu programa de correio já direcionado ao nosso contacto, com
+              <strong>assunto e texto sugeridos</strong> — pode completar ou ajustar a mensagem antes de
+              enviar.
+            </p>
+            <p class="muted landing-contact-email-line" id="contactCadastroEmailLine" hidden></p>
+          </section>
+
+          <p class="landing-copyright">© Barb x Go</p>
+        </div>
+
+        <div id="homeStatus" class="msg landing-status-msg" role="status" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
+

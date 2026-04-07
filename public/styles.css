@@ -93,6 +93,7 @@ body.layout-landing .btn-landing-header-link {
   border-radius: 999px;
   font-size: 0.88rem;
   font-weight: 600;
+  text-decoration: none;
 }
 
 body.layout-landing .btn-landing-header-link:hover {
@@ -191,6 +192,7 @@ body.layout-landing .btn-landing-hero-secondary {
   border-radius: 999px;
   padding: 12px 28px;
   font-weight: 600;
+  text-decoration: none;
 }
 
 body.layout-landing .btn-landing-hero-secondary:hover {
