@@ -27,6 +27,9 @@
         </a>
         <div class="top-bar-right">
           <span id="shopBadge" class="shop-badge" hidden></span>
+          <button type="button" id="btnAbout" class="btn btn-landing-header-link">
+            Saiba mais
+          </button>
           <button type="button" id="btnLoginShop" class="btn btn-landing-header-login">
             <span class="btn-login-long">Entrar como barbearia</span>
             <span class="btn-login-short">Entrar</span>
@@ -46,6 +49,9 @@
           </p>
           <button type="button" id="btnFindShop" class="btn btn-landing-hero-cta">
             Encontrar barbearia
+          </button>
+          <button type="button" id="btnAboutHero" class="btn btn-landing-hero-secondary">
+            Saiba mais
           </button>
         </div>
 
@@ -105,8 +111,27 @@
         </div>
 
         <div class="landing-extra landing-footer-info">
+          <p class="landing-copyright">© Barb x Go</p>
+        </div>
+
+        <div id="homeStatus" class="msg landing-status-msg" role="status" aria-live="polite"></div>
+      </section>
+
+      <!-- Página /about/ (conteúdo institucional) -->
+      <section id="aboutPage" class="landing-page about-page" hidden>
+        <div class="landing-hero-center about-hero">
+          <h1 class="landing-hero-title">Sobre o Barb x Go</h1>
+          <p class="landing-hero-tagline">
+            Para clientes e barbearias — simples, rápido e organizado.
+          </p>
+          <button type="button" id="btnAboutBack" class="btn btn-landing-hero-cta">
+            Voltar
+          </button>
+        </div>
+
+        <div class="landing-extra landing-footer-info about-content">
           <section class="landing-block landing-about" aria-labelledby="landing-about-title">
-            <h2 class="landing-block-title" id="landing-about-title">Sobre o Barb x Go</h2>
+            <h2 class="landing-block-title" id="landing-about-title">Saiba mais</h2>
             <p>
               O <strong>Barb x Go</strong> foi pensado para tornar a ida à barbearia mais
               organizada: menos espera à toa, menos confusão com horários e mais previsibilidade
@@ -133,12 +158,9 @@
               e responde o quanto antes.
             </p>
             <div class="landing-contact-actions">
-              <a
-                id="contactCadastroLink"
-                class="btn btn-filled landing-contact-btn"
-                href="#"
-                >Enviar pedido por e-mail</a
-              >
+              <a id="contactCadastroLink" class="btn btn-filled landing-contact-btn" href="#">
+                Enviar pedido por e-mail
+              </a>
             </div>
             <p class="hint landing-contact-hint">
               Ao clicar, abre-se o seu programa de correio já direcionado ao nosso contacto, com
@@ -149,8 +171,6 @@
           </section>
           <p class="landing-copyright">© Barb x Go</p>
         </div>
-
-        <div id="homeStatus" class="msg landing-status-msg" role="status" aria-live="polite"></div>
       </section>
 
       <!-- Painel do dono (após login) -->

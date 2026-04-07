@@ -66,6 +66,33 @@ function setLandingHeroVisible(visible) {
   if (el) el.hidden = !visible;
 }
 
+function showAboutPage() {
+  setBodyLayout("landing");
+  document.title = "Sobre · Barb x Go";
+  const home = $("homeLanding");
+  const about = $("aboutPage");
+  if (home) home.hidden = true;
+  if (about) about.hidden = false;
+  const owner = $("ownerPortal");
+  const app = $("app");
+  if (owner) owner.hidden = true;
+  if (app) app.hidden = true;
+  const login = $("loginCard");
+  const find = $("findStub");
+  if (login) login.hidden = true;
+  if (find) find.hidden = true;
+  const aboutBtn = $("btnAbout");
+  const aboutHeroBtn = $("btnAboutHero");
+  if (aboutBtn) aboutBtn.hidden = true;
+  if (aboutHeroBtn) aboutHeroBtn.hidden = true;
+}
+
+function navigateTo(path) {
+  const p = path || "/";
+  if (window.location.pathname === p) return;
+  history.pushState({}, "", p);
+}
+
 function setHomeStatus(msg, isError = false) {
   const el = $("homeStatus");
   if (!el) return;
@@ -1368,6 +1395,8 @@ async function resolveOwnerShop(uid) {
 function showLandingHome() {
   setBodyLayout("landing");
   document.title = "Barb x Go";
+  const about = $("aboutPage");
+  if (about) about.hidden = true;
   $("homeLanding").hidden = false;
   $("ownerPortal").hidden = true;
   $("app").hidden = true;
@@ -2137,7 +2166,8 @@ async function init() {
   }
 
   firebase.auth().onAuthStateChanged(async function (user) {
-    if (getSlugFromPath()) return;
+    const slug = getSlugFromPath();
+    if (slug && slug !== "about") return;
     if (!user || user.isAnonymous) return;
     try {
       const r = await resolveOwnerShop(user.uid);
@@ -2197,6 +2227,50 @@ async function init() {
     }
     const iq = $("findShopQuery");
     if (iq) iq.value = "";
+  });
+
+  const aboutBtn = $("btnAbout");
+  const aboutHeroBtn = $("btnAboutHero");
+  const aboutBackBtn = $("btnAboutBack");
+  if (aboutBtn) {
+    aboutBtn.addEventListener("click", function () {
+      navigateTo("/about/");
+      showAboutPage();
+    });
+  }
+  if (aboutHeroBtn) {
+    aboutHeroBtn.addEventListener("click", function () {
+      navigateTo("/about/");
+      showAboutPage();
+    });
+  }
+  if (aboutBackBtn) {
+    aboutBackBtn.addEventListener("click", function () {
+      navigateTo("/");
+      showLandingHome();
+      const about = $("aboutPage");
+      if (about) about.hidden = true;
+      const aboutBtn2 = $("btnAbout");
+      const aboutHeroBtn2 = $("btnAboutHero");
+      if (aboutBtn2) aboutBtn2.hidden = false;
+      if (aboutHeroBtn2) aboutHeroBtn2.hidden = false;
+    });
+  }
+
+  window.addEventListener("popstate", function () {
+    const slug = getSlugFromPath();
+    if (slug === "about") {
+      showAboutPage();
+      return;
+    }
+    const queryShopId2 = getQueryParam("shopId");
+    if (!slug && !(queryShopId2 && queryShopId2.trim())) {
+      const aboutBtn2 = $("btnAbout");
+      const aboutHeroBtn2 = $("btnAboutHero");
+      if (aboutBtn2) aboutBtn2.hidden = false;
+      if (aboutHeroBtn2) aboutHeroBtn2.hidden = false;
+      showLandingHome();
+    }
   });
   const findShopForm = $("findShopForm");
   if (findShopForm) {
@@ -2433,6 +2507,11 @@ async function init() {
 
   const slugFromPath = getSlugFromPath();
   const queryShopId = getQueryParam("shopId");
+
+  if (slugFromPath === "about") {
+    showAboutPage();
+    return;
+  }
 
   if (slugFromPath) {
     setHomeStatus("A abrir barbearia…");

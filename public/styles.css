@@ -84,6 +84,22 @@ body.layout-landing .btn-landing-header-login:hover {
   filter: none;
 }
 
+body.layout-landing .btn-landing-header-link {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: none;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+body.layout-landing .btn-landing-header-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
 body.layout-landing .btn-login-short {
   display: none;
 }
@@ -165,6 +181,29 @@ body.layout-landing .btn-landing-hero-cta {
 body.layout-landing .btn-landing-hero-cta:hover {
   filter: brightness(0.96);
   transform: translateY(-2px);
+}
+
+body.layout-landing .btn-landing-hero-secondary {
+  margin-top: 12px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  padding: 12px 28px;
+  font-weight: 600;
+}
+
+body.layout-landing .btn-landing-hero-secondary:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+body.layout-landing .about-hero {
+  padding-top: 112px;
+  padding-bottom: 32px;
+}
+
+body.layout-landing .about-content {
+  padding-top: 28px;
 }
 
 body.layout-landing .landing-panel {
