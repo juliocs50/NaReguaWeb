@@ -2369,13 +2369,13 @@ async function loadOwnerFinancePanel() {
       const head = document.createElement("div");
       head.className = "owner-fin-row owner-fin-head";
       head.innerHTML =
-        "<div>Barbeiro</div>" +
-        "<div>DONE</div>" +
-        "<div>Serviços</div>" +
-        "<div>Taxa app</div>" +
-        "<div>Total</div>" +
-        "<div>Comissão</div>" +
-        "<div>Repasse</div>";
+        "<div class=\"owner-fin-cell owner-fin-cell--name\">Barbeiro</div>" +
+        "<div class=\"owner-fin-cell owner-fin-cell--num\">DONE</div>" +
+        "<div class=\"owner-fin-cell owner-fin-cell--money\">Serviços</div>" +
+        "<div class=\"owner-fin-cell owner-fin-cell--money\">Taxa app</div>" +
+        "<div class=\"owner-fin-cell owner-fin-cell--money\">Total</div>" +
+        "<div class=\"owner-fin-cell owner-fin-cell--commission\">Comissão</div>" +
+        "<div class=\"owner-fin-cell owner-fin-cell--money\">Repasse</div>";
       table.appendChild(head);
 
       barbers.forEach(function (b) {
@@ -2388,22 +2388,27 @@ async function loadOwnerFinancePanel() {
         row.className = "owner-fin-row";
 
         const cName = document.createElement("div");
+        cName.className = "owner-fin-cell owner-fin-cell--name";
         cName.textContent = b.name || "Barbeiro";
 
         const cDone = document.createElement("div");
-        cDone.className = "owner-fin-cell-muted";
+        cDone.className = "owner-fin-cell owner-fin-cell--num owner-fin-cell-muted";
         cDone.textContent = String(st.countDone);
 
         const cSvc = document.createElement("div");
+        cSvc.className = "owner-fin-cell owner-fin-cell--money";
         cSvc.textContent = priceToBRL(st.serviceCents);
 
         const cFee = document.createElement("div");
+        cFee.className = "owner-fin-cell owner-fin-cell--money";
         cFee.textContent = priceToBRL(st.appFeeCents);
 
         const cTot = document.createElement("div");
+        cTot.className = "owner-fin-cell owner-fin-cell--money";
         cTot.textContent = priceToBRL(total);
 
         const cCom = document.createElement("div");
+        cCom.className = "owner-fin-cell owner-fin-cell--commission";
         const comWrap = document.createElement("div");
         comWrap.className = "owner-fin-commission";
         const inp = document.createElement("input");
@@ -2438,6 +2443,7 @@ async function loadOwnerFinancePanel() {
         cCom.appendChild(comWrap);
 
         const cPay = document.createElement("div");
+        cPay.className = "owner-fin-cell owner-fin-cell--money";
         cPay.textContent = priceToBRL(payout);
 
         row.appendChild(cName);
