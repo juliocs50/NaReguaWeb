@@ -1375,16 +1375,7 @@ select:focus {
   font-size: 0.9rem;
 }
 
-.owner-fin-commission {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  justify-content: center;
-}
-
-.owner-fin-commission input {
-  width: 88px;
-}
+/* comissão agora é só texto (ex: 50%) */
 
 @media (max-width: 720px) {
   .owner-finance-summary {

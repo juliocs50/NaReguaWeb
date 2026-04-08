@@ -2409,38 +2409,10 @@ async function loadOwnerFinancePanel() {
 
         const cCom = document.createElement("div");
         cCom.className = "owner-fin-cell owner-fin-cell--commission";
-        const comWrap = document.createElement("div");
-        comWrap.className = "owner-fin-commission";
-        const inp = document.createElement("input");
-        inp.type = "number";
-        inp.min = "0";
-        inp.max = "100";
-        inp.step = "1";
-        inp.value = String(pct);
-        inp.setAttribute("aria-label", "Comissão (%) de " + (b.name || "barbeiro"));
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "btn btn-outline btn-sm";
-        btn.textContent = "Salvar";
-        btn.addEventListener("click", function () {
-          const next = normalizePercent(inp.value);
-          db.collection("barbershops")
-            .doc(shopId)
-            .collection("barbers")
-            .doc(b.id)
-            .update({ commissionPercent: next })
-            .then(function () {
-              setOwnerStatus("Comissão salva.");
-              b.commissionPercent = next;
-              loadOwnerFinancePanel().catch(function () {});
-            })
-            .catch(function (e) {
-              setOwnerStatus(e.message || "Erro ao salvar comissão.", true);
-            });
-        });
-        comWrap.appendChild(inp);
-        comWrap.appendChild(btn);
-        cCom.appendChild(comWrap);
+        const pctEl = document.createElement("span");
+        pctEl.className = "owner-fin-cell-muted";
+        pctEl.textContent = String(pct) + "%";
+        cCom.appendChild(pctEl);
 
         const cPay = document.createElement("div");
         cPay.className = "owner-fin-cell owner-fin-cell--money";
