@@ -207,11 +207,7 @@ function barberFromDoc(doc) {
   const scheduleByDay = window.NaReguaSchedule.parseScheduleFromFirestore(
     data.scheduleByDay
   );
-  const commissionPercent =
-    data.commissionPercent != null && !isNaN(Number(data.commissionPercent))
-      ? Number(data.commissionPercent)
-      : 50;
-  return { id: doc.id, name: data.name || "", scheduleByDay, commissionPercent };
+  return { id: doc.id, name: data.name || "", scheduleByDay };
 }
 
 function serviceFromDoc(doc) {
@@ -2359,6 +2355,15 @@ async function loadOwnerFinancePanel() {
   if (feeEl) feeEl.textContent = priceToBRL(appFeeSum);
   if (chargedEl) chargedEl.textContent = priceToBRL(serviceSum + appFeeSum);
 
+  const barberBonusEl = $("ownerFinanceBarberBonusTotal");
+  const appProfitEl = $("ownerFinanceAppProfitTotal");
+  const appTotalEl = $("ownerFinanceAppTotal");
+  const barberBonus = Math.round(appFeeSum / 2);
+  const appProfit = appFeeSum - barberBonus;
+  if (barberBonusEl) barberBonusEl.textContent = priceToBRL(barberBonus);
+  if (appProfitEl) appProfitEl.textContent = priceToBRL(appProfit);
+  if (appTotalEl) appTotalEl.textContent = priceToBRL(appFeeSum);
+
   const table = $("ownerFinanceTable");
   if (table) {
     table.innerHTML = "";
@@ -2374,15 +2379,13 @@ async function loadOwnerFinancePanel() {
         "<div class=\"owner-fin-cell owner-fin-cell--money\">Serviços</div>" +
         "<div class=\"owner-fin-cell owner-fin-cell--money\">Taxa app</div>" +
         "<div class=\"owner-fin-cell owner-fin-cell--money\">Total</div>" +
-        "<div class=\"owner-fin-cell owner-fin-cell--commission\">Comissão</div>" +
-        "<div class=\"owner-fin-cell owner-fin-cell--money\">Repasse</div>";
+        "<div class=\"owner-fin-cell owner-fin-cell--money\">Bônus (50%)</div>";
       table.appendChild(head);
 
       barbers.forEach(function (b) {
         const st = agg[b.id] || { countDone: 0, serviceCents: 0, appFeeCents: 0 };
         const total = st.serviceCents + st.appFeeCents;
-        const pct = normalizePercent(b.commissionPercent);
-        const payout = Math.round(st.serviceCents * (pct / 100));
+        const bonus = Math.round(st.appFeeCents / 2);
 
         const row = document.createElement("div");
         row.className = "owner-fin-row";
@@ -2407,24 +2410,16 @@ async function loadOwnerFinancePanel() {
         cTot.className = "owner-fin-cell owner-fin-cell--money";
         cTot.textContent = priceToBRL(total);
 
-        const cCom = document.createElement("div");
-        cCom.className = "owner-fin-cell owner-fin-cell--commission";
-        const pctEl = document.createElement("span");
-        pctEl.className = "owner-fin-cell-muted";
-        pctEl.textContent = String(pct) + "%";
-        cCom.appendChild(pctEl);
-
-        const cPay = document.createElement("div");
-        cPay.className = "owner-fin-cell owner-fin-cell--money";
-        cPay.textContent = priceToBRL(payout);
+        const cBonus = document.createElement("div");
+        cBonus.className = "owner-fin-cell owner-fin-cell--money";
+        cBonus.textContent = priceToBRL(bonus);
 
         row.appendChild(cName);
         row.appendChild(cDone);
         row.appendChild(cSvc);
         row.appendChild(cFee);
         row.appendChild(cTot);
-        row.appendChild(cCom);
-        row.appendChild(cPay);
+        row.appendChild(cBonus);
         table.appendChild(row);
       });
     }
@@ -2437,15 +2432,9 @@ async function loadOwnerFinancePanel() {
       String(mo).padStart(2, "0") +
       "/" +
       y +
-      " — repasse calculado em cima do valor de serviços (sem taxa do app).";
+      " — taxa do app é dividida 50/50: metade bônus do barbeiro, metade lucro do app.";
   }
   clearOwnerStatusIfLoading();
-}
-
-function normalizePercent(v) {
-  const n = Number(v);
-  if (!isFinite(n)) return 0;
-  return Math.max(0, Math.min(100, Math.round(n)));
 }
 
 async function addOwnerDelayMinutes(shopId, dateKey, barberId, delta) {

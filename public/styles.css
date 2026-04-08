@@ -1335,7 +1335,7 @@ select:focus {
 
 .owner-fin-row {
   display: grid;
-  grid-template-columns: 1.2fr 0.6fr 0.9fr 0.9fr 0.9fr 0.9fr 0.9fr;
+  grid-template-columns: 1.2fr 0.6fr 0.9fr 0.9fr 0.9fr 0.9fr;
   gap: 10px;
   padding: 10px 12px;
   align-items: center;
@@ -1357,9 +1357,7 @@ select:focus {
   font-variant-numeric: tabular-nums;
 }
 
-.owner-fin-cell--commission {
-  text-align: center;
-}
+/* colunas monetárias já alinham à direita */
 
 .owner-fin-row:first-child {
   border-top: 0;
