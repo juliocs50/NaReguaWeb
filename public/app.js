@@ -2432,7 +2432,7 @@ async function loadOwnerFinancePanel() {
       String(mo).padStart(2, "0") +
       "/" +
       y +
-      " — taxa do app é dividida 50/50: metade bônus do barbeiro, metade lucro do app.";
+      ".";
   }
   clearOwnerStatusIfLoading();
 }
