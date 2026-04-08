@@ -197,9 +197,32 @@
         </div>
 
         <div id="ownerPanelFinance" class="owner-panel card" data-panel="finance" hidden>
-          <h3 class="subsection-title">Finanças — taxa do app</h3>
-          <p class="muted" id="ownerFinanceBlurb"></p>
-          <p class="owner-finance-total" id="ownerFinanceTotal">—</p>
+          <h3 class="subsection-title">Finanças</h3>
+          <p class="muted owner-finance-hint">
+            Somente atendimentos <strong>finalizados</strong> entram na soma do mês. A <strong>taxa do app</strong> fica separada.
+          </p>
+          <label class="field owner-finance-month-field">
+            <span class="field-label">Mês</span>
+            <input type="month" id="ownerFinanceMonth" />
+          </label>
+
+          <div class="owner-finance-summary">
+            <div class="owner-finance-kpi">
+              <span class="muted">Serviços (R$)</span>
+              <strong id="ownerFinanceServiceTotal">—</strong>
+            </div>
+            <div class="owner-finance-kpi">
+              <span class="muted">Taxa do app (R$)</span>
+              <strong id="ownerFinanceAppFeeTotal">—</strong>
+            </div>
+            <div class="owner-finance-kpi">
+              <span class="muted">Total cobrado (R$)</span>
+              <strong id="ownerFinanceChargedTotal">—</strong>
+            </div>
+          </div>
+
+          <div id="ownerFinanceTable" class="owner-finance-table"></div>
+          <div id="ownerFinanceBlurb" class="muted"></div>
         </div>
 
         <div id="ownerPanelLocation" class="owner-panel card" data-panel="location" hidden>

@@ -207,7 +207,11 @@ function barberFromDoc(doc) {
   const scheduleByDay = window.NaReguaSchedule.parseScheduleFromFirestore(
     data.scheduleByDay
   );
-  return { id: doc.id, name: data.name || "", scheduleByDay };
+  const commissionPercent =
+    data.commissionPercent != null && !isNaN(Number(data.commissionPercent))
+      ? Number(data.commissionPercent)
+      : 50;
+  return { id: doc.id, name: data.name || "", scheduleByDay, commissionPercent };
 }
 
 function serviceFromDoc(doc) {
@@ -2305,13 +2309,21 @@ async function loadOwnerMenuPanel() {
 async function loadOwnerFinancePanel() {
   const shopId = window.__ownerShopId;
   if (!shopId) return;
+  setOwnerStatus("A carregar finanças…");
   const now = new Date();
-  const y = now.getFullYear();
-  const mo = now.getMonth() + 1;
+  const monthInput = $("ownerFinanceMonth");
+  const ymDefault =
+    now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
+  const ym = monthInput && monthInput.value ? monthInput.value : ymDefault;
+  if (monthInput) monthInput.value = ym;
+  const y = parseInt(String(ym).slice(0, 4), 10);
+  const mo = parseInt(String(ym).slice(5, 7), 10);
   const start = y + "-" + String(mo).padStart(2, "0") + "-01";
   const lastDay = new Date(y, mo, 0).getDate();
   const end =
     y + "-" + String(mo).padStart(2, "0") + "-" + String(lastDay).padStart(2, "0");
+
+  const barbers = await loadBarbers(shopId);
   const snap = await db
     .collection("barbershops")
     .doc(shopId)
@@ -2319,24 +2331,143 @@ async function loadOwnerFinancePanel() {
     .where("dateKey", ">=", start)
     .where("dateKey", "<=", end)
     .get();
-  let sum = 0;
+
+  let serviceSum = 0;
+  let appFeeSum = 0;
+  const agg = {}; // barberId -> stats
   snap.docs.forEach(function (doc) {
     const d = doc.data();
-    if ((d.createdBy || "") === "CLIENT" && (d.appFeeCents || 0) > 0) {
-      sum += Number(d.appFeeCents);
+    if ((d.status || "SCHEDULED") !== "DONE") return;
+    const barberId = String(d.barberId || "");
+    if (!barberId) return;
+    const svc = Number(d.servicePriceCents || 0);
+    const fee = Number(d.appFeeCents || 0);
+    serviceSum += svc;
+    appFeeSum += fee;
+    if (!agg[barberId]) {
+      agg[barberId] = { countDone: 0, serviceCents: 0, appFeeCents: 0 };
     }
+    agg[barberId].countDone += 1;
+    agg[barberId].serviceCents += svc;
+    agg[barberId].appFeeCents += fee;
   });
+
+  const serviceEl = $("ownerFinanceServiceTotal");
+  const feeEl = $("ownerFinanceAppFeeTotal");
+  const chargedEl = $("ownerFinanceChargedTotal");
+  if (serviceEl) serviceEl.textContent = priceToBRL(serviceSum);
+  if (feeEl) feeEl.textContent = priceToBRL(appFeeSum);
+  if (chargedEl) chargedEl.textContent = priceToBRL(serviceSum + appFeeSum);
+
+  const table = $("ownerFinanceTable");
+  if (table) {
+    table.innerHTML = "";
+    if (!barbers.length) {
+      table.innerHTML =
+        '<p class="muted" style="padding:12px">Cadastre barbeiros primeiro.</p>';
+    } else {
+      const head = document.createElement("div");
+      head.className = "owner-fin-row owner-fin-head";
+      head.innerHTML =
+        "<div>Barbeiro</div>" +
+        "<div>DONE</div>" +
+        "<div>Serviços</div>" +
+        "<div>Taxa app</div>" +
+        "<div>Total</div>" +
+        "<div>Comissão</div>" +
+        "<div>Repasse</div>";
+      table.appendChild(head);
+
+      barbers.forEach(function (b) {
+        const st = agg[b.id] || { countDone: 0, serviceCents: 0, appFeeCents: 0 };
+        const total = st.serviceCents + st.appFeeCents;
+        const pct = normalizePercent(b.commissionPercent);
+        const payout = Math.round(st.serviceCents * (pct / 100));
+
+        const row = document.createElement("div");
+        row.className = "owner-fin-row";
+
+        const cName = document.createElement("div");
+        cName.textContent = b.name || "Barbeiro";
+
+        const cDone = document.createElement("div");
+        cDone.className = "owner-fin-cell-muted";
+        cDone.textContent = String(st.countDone);
+
+        const cSvc = document.createElement("div");
+        cSvc.textContent = priceToBRL(st.serviceCents);
+
+        const cFee = document.createElement("div");
+        cFee.textContent = priceToBRL(st.appFeeCents);
+
+        const cTot = document.createElement("div");
+        cTot.textContent = priceToBRL(total);
+
+        const cCom = document.createElement("div");
+        const comWrap = document.createElement("div");
+        comWrap.className = "owner-fin-commission";
+        const inp = document.createElement("input");
+        inp.type = "number";
+        inp.min = "0";
+        inp.max = "100";
+        inp.step = "1";
+        inp.value = String(pct);
+        inp.setAttribute("aria-label", "Comissão (%) de " + (b.name || "barbeiro"));
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "btn btn-outline btn-sm";
+        btn.textContent = "Salvar";
+        btn.addEventListener("click", function () {
+          const next = normalizePercent(inp.value);
+          db.collection("barbershops")
+            .doc(shopId)
+            .collection("barbers")
+            .doc(b.id)
+            .update({ commissionPercent: next })
+            .then(function () {
+              setOwnerStatus("Comissão salva.");
+              b.commissionPercent = next;
+              loadOwnerFinancePanel().catch(function () {});
+            })
+            .catch(function (e) {
+              setOwnerStatus(e.message || "Erro ao salvar comissão.", true);
+            });
+        });
+        comWrap.appendChild(inp);
+        comWrap.appendChild(btn);
+        cCom.appendChild(comWrap);
+
+        const cPay = document.createElement("div");
+        cPay.textContent = priceToBRL(payout);
+
+        row.appendChild(cName);
+        row.appendChild(cDone);
+        row.appendChild(cSvc);
+        row.appendChild(cFee);
+        row.appendChild(cTot);
+        row.appendChild(cCom);
+        row.appendChild(cPay);
+        table.appendChild(row);
+      });
+    }
+  }
+
   const blurb = $("ownerFinanceBlurb");
   if (blurb) {
     blurb.textContent =
-      "Total referente a agendamentos feitos pelo cliente (taxa do app) no mês " +
-      mo +
+      "Mês " +
+      String(mo).padStart(2, "0") +
       "/" +
       y +
-      ".";
+      " — repasse calculado em cima do valor de serviços (sem taxa do app).";
   }
-  const tot = $("ownerFinanceTotal");
-  if (tot) tot.textContent = priceToBRL(sum);
+  clearOwnerStatusIfLoading();
+}
+
+function normalizePercent(v) {
+  const n = Number(v);
+  if (!isFinite(n)) return 0;
+  return Math.max(0, Math.min(100, Math.round(n)));
 }
 
 async function addOwnerDelayMinutes(shopId, dateKey, barberId, delta) {
@@ -3306,6 +3437,12 @@ async function init() {
   $("ownerAgendaDate").addEventListener("change", function () {
     loadOwnerAgendaPanel().catch(function () {});
   });
+  const ownerFinanceMonth = $("ownerFinanceMonth");
+  if (ownerFinanceMonth) {
+    ownerFinanceMonth.addEventListener("change", function () {
+      loadOwnerFinancePanel().catch(function () {});
+    });
+  }
   const ownerAgendaBarberSel = $("ownerAgendaBarberSelect");
   if (ownerAgendaBarberSel) {
     ownerAgendaBarberSel.addEventListener("change", function () {
