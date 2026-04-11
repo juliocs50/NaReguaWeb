@@ -3293,6 +3293,17 @@ async function init() {
     setLandingHeroVisible(false);
     setHomeStatus("");
   });
+  const btnHeroRegister = $("btnHeroRegisterShop");
+  if (btnHeroRegister) {
+    btnHeroRegister.addEventListener("click", function () {
+      $("loginCard").hidden = false;
+      setOwnerLoginCardMode("register");
+      $("findStub").hidden = true;
+      setLandingHeroVisible(false);
+      setHomeStatus("");
+    });
+  }
+
   $("btnFindShop").addEventListener("click", function () {
     $("findStub").hidden = false;
     $("loginCard").hidden = true;
@@ -3321,13 +3332,6 @@ async function init() {
     setHomeStatus("");
   });
 
-  const ownerShowRegisterBtn = $("ownerShowRegisterBtn");
-  if (ownerShowRegisterBtn) {
-    ownerShowRegisterBtn.addEventListener("click", function () {
-      setOwnerLoginCardMode("register");
-      setHomeStatus("");
-    });
-  }
   const ownerRegisterBackBtn = $("ownerRegisterBackBtn");
   if (ownerRegisterBackBtn) {
     ownerRegisterBackBtn.addEventListener("click", function () {

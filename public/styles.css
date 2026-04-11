@@ -200,6 +200,7 @@ body.layout-landing .btn-landing-hero-secondary {
   padding: 12px 28px;
   font-weight: 600;
   text-decoration: none;
+  min-width: min(100%, 300px);
 }
 
 body.layout-landing .btn-landing-hero-secondary:hover {
@@ -869,18 +870,11 @@ select:focus {
   margin-top: 8px;
 }
 
-.landing-login-secondary {
-  margin-top: 16px;
-  padding-top: 16px;
+.landing-login-recover {
+  margin-top: 14px;
+  padding-top: 14px;
   border-top: 1px solid rgba(255, 255, 255, 0.12);
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-}
-
-.landing-login-wide {
-  flex: 1 1 200px;
-  min-width: 160px;
+  text-align: center;
 }
 
 .landing-login-link {
