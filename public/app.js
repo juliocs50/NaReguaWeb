@@ -3232,12 +3232,20 @@ function setOwnerLoginCardMode(mode) {
 function mapCallableError(err) {
   if (!err) return "Erro desconhecido.";
   const code = err.code || "";
-  const msg = err.message || "Erro.";
+  let msg = err.message || "Erro.";
   if (code === "functions/invalid-argument") return msg;
   if (code === "functions/permission-denied") return msg;
   if (code === "functions/already-exists") return msg;
-  if (code === "functions/internal") return msg;
   if (code === "functions/unauthenticated") return msg;
+  if (code === "functions/internal") {
+    if (!msg || /^internal$/i.test(String(msg).trim())) {
+      return (
+        "Erro no servidor ao cadastrar. Confirme o código e a ligação; se continuar, é preciso " +
+        "publicar de novo a Cloud Function registerBarbershopWithCode (firebase deploy --only functions)."
+      );
+    }
+    return msg;
+  }
   return msg;
 }
 
