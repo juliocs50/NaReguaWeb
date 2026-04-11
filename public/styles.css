@@ -866,19 +866,29 @@ select:focus {
   border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-.landing-login-actions {
+.landing-login-row-main {
   margin-top: 8px;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px 16px;
 }
 
-.landing-login-recover {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  text-align: center;
+.landing-login-row-main .btn-filled {
+  flex: 0 1 auto;
+}
+
+.landing-login-row-back {
+  margin-top: 12px;
+}
+
+.btn-landing-login-back {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .landing-login-link {
   flex: 0 1 auto;
+  text-align: right;
   text-decoration: underline;
   border: none;
   background: transparent;
