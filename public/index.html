@@ -309,11 +309,20 @@
             abrir barbearia.
           </p>
           <div class="owner-admin-code-row">
-            <code id="ownerAdminSignupCode" class="owner-admin-code">—</code>
-            <button type="button" id="ownerAdminCopyCodeBtn" class="btn btn-outline btn-sm">
-              Copiar código
-            </button>
+            <code id="ownerAdminSignupCode" class="owner-admin-code" title="Código atual">—</code>
+            <div class="owner-admin-code-actions">
+              <button type="button" id="ownerAdminGenerateCodeBtn" class="btn btn-filled btn-sm">
+                Gerar código (10 caracteres)
+              </button>
+              <button type="button" id="ownerAdminCopyCodeBtn" class="btn btn-outline btn-sm">
+                Copiar
+              </button>
+            </div>
           </div>
+          <p id="ownerAdminCodeEmptyHint" class="muted owner-admin-code-hint" hidden>
+            Ainda não há código guardado. Use <strong>Gerar código</strong> para criar letras e números
+            aleatórios (10 caracteres) e envie por e-mail a quem for cadastrar na web.
+          </p>
           <p class="muted owner-admin-finance-note">
             Todas as barbearias (incluindo a sua). Totais da <strong>taxa do app</strong> (soma de
             <code>appFeeCents</code> em atendimentos <strong>finalizados</strong> — o painel Finanças da loja

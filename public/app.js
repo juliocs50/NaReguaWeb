@@ -1010,7 +1010,7 @@ function renderAdminShopsTable(shops) {
       return (
         "<tr><td>" +
         name +
-        '<br><span class="muted" style="font-size:0.8rem">' +
+        '<span class="owner-admin-shop-id">' +
         id +
         "</span></td><td class=\"num\">" +
         n +
@@ -1022,8 +1022,8 @@ function renderAdminShopsTable(shops) {
     .join("");
   wrap.innerHTML =
     '<table class="owner-admin-shops-table"><thead><tr>' +
-    "<th>Barbearia</th><th class=\"num\">Atend. finalizados</th>" +
-    '<th class="num">Total taxa app (R$)</th></tr></thead><tbody>' +
+    "<th>Barbearia</th><th>Atend. finalizados</th>" +
+    "<th>Total taxa app (R$)</th></tr></thead><tbody>" +
     rows +
     "</tbody></table>";
 }
@@ -1034,6 +1034,51 @@ function escapeHtml(s) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+/** Igual à Cloud Function: 10 caracteres, letras minúsculas + dígitos (sem caracteres ambíguos). */
+function randomPlatformSignupCode() {
+  const chars = "abcdefghijkmnpqrstuvwxyz23456789";
+  let out = "";
+  for (let i = 0; i < 10; i++) {
+    out += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return out;
+}
+
+function setAdminSignupCodeUI(code) {
+  const codeEl = $("ownerAdminSignupCode");
+  const hint = $("ownerAdminCodeEmptyHint");
+  const c = code && String(code).trim() ? String(code).trim() : "";
+  if (codeEl) codeEl.textContent = c.length > 0 ? c : "—";
+  if (hint) hint.hidden = c.length > 0;
+}
+
+async function persistAdminSignupCode(newCode) {
+  await initFirebaseCore();
+  const ref = db.collection("admin_config").doc("signup");
+  await ref.set(
+    {
+      currentCode: newCode,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+}
+
+async function ownerAdminGenerateCodeClick() {
+  const btn = $("ownerAdminGenerateCodeBtn");
+  if (btn) btn.disabled = true;
+  try {
+    const next = randomPlatformSignupCode();
+    await persistAdminSignupCode(next);
+    setAdminSignupCodeUI(next);
+    setOwnerStatus("Código novo (10 caracteres) guardado. Envie por e-mail a quem for cadastrar na web.");
+  } catch (e) {
+    setOwnerStatus(e.message || "Não foi possível guardar o código.", true);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 async function loadPlatformAdminDataViaFirestore() {
@@ -1093,16 +1138,11 @@ async function loadPlatformAdminData() {
       if (wrap) {
         wrap.innerHTML = "<p class=\"muted err\">" + escapeHtml(msg) + "</p>";
       }
-      if (codeEl) codeEl.textContent = "—";
+      setAdminSignupCodeUI("");
       return;
     }
   }
-  if (codeEl) {
-    codeEl.textContent =
-      data.currentCode && String(data.currentCode).length > 0
-        ? String(data.currentCode)
-        : "(primeiro cadastro na web: juliocs50 ou INITIAL_SIGNUP_CODE na função)";
-  }
+  setAdminSignupCodeUI(data.currentCode || "");
   renderAdminShopsTable(data.shops || []);
 }
 
@@ -3539,12 +3579,20 @@ async function init() {
     ownerAdminCopyCodeBtn.addEventListener("click", function () {
       const el = $("ownerAdminSignupCode");
       const t = el && el.textContent ? el.textContent.trim() : "";
-      if (!t || t.indexOf("(") === 0) {
-        setOwnerStatus("Não há código para copiar. Atualize a lista.", true);
+      if (!t || t === "—") {
+        setOwnerStatus("Gere um código antes de copiar.", true);
         return;
       }
       copyTextToClipboard(t).then(function (ok) {
         setOwnerStatus(ok ? "Código copiado." : "Não foi possível copiar.");
+      });
+    });
+  }
+  const ownerAdminGenerateCodeBtn = $("ownerAdminGenerateCodeBtn");
+  if (ownerAdminGenerateCodeBtn) {
+    ownerAdminGenerateCodeBtn.addEventListener("click", function () {
+      ownerAdminGenerateCodeClick().catch(function (e) {
+        setOwnerStatus(e.message || "Erro", true);
       });
     });
   }

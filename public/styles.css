@@ -1045,18 +1045,35 @@ select:focus {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.owner-admin-code-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
 }
 
 .owner-admin-code {
   display: inline-block;
+  min-width: 11ch;
+  max-width: 100%;
   padding: 10px 14px;
   border-radius: 8px;
   background: var(--md-sys-color-surface);
   border: 1px solid var(--md-sys-color-outline);
   font-size: 1.05rem;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.owner-admin-code-hint {
+  margin: 0 0 14px;
+  font-size: 0.82rem;
+  line-height: 1.45;
 }
 
 .owner-admin-finance-note {
@@ -1092,6 +1109,7 @@ select:focus {
 
 .owner-admin-shops-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.88rem;
 }
@@ -1099,8 +1117,27 @@ select:focus {
 .owner-admin-shops-table th,
 .owner-admin-shops-table td {
   text-align: left;
-  padding: 8px 10px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  vertical-align: top;
+}
+
+.owner-admin-shops-table th:nth-child(1),
+.owner-admin-shops-table td:nth-child(1) {
+  width: 46%;
+  word-break: break-word;
+}
+
+.owner-admin-shops-table th:nth-child(2),
+.owner-admin-shops-table td:nth-child(2) {
+  width: 27%;
+  text-align: right;
+}
+
+.owner-admin-shops-table th:nth-child(3),
+.owner-admin-shops-table td:nth-child(3) {
+  width: 27%;
+  text-align: right;
 }
 
 .owner-admin-shops-table th {
@@ -1109,8 +1146,17 @@ select:focus {
 }
 
 .owner-admin-shops-table td.num {
-  text-align: right;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.owner-admin-shops-table .owner-admin-shop-id {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.78rem;
+  word-break: break-all;
+  line-height: 1.35;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .owner-location-hint {
