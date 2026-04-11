@@ -288,75 +288,129 @@ body.layout-landing .landing-copyright {
   color: rgba(255, 255, 255, 0.38);
 }
 
-/* Rodapé da página Sobre (Saiba mais): redes + lojas */
+/* Rodapé da página Sobre: cartão único, grelha, ícones sociais */
 .about-page-footer {
-  margin-top: 48px;
-  padding-top: 40px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  max-width: 720px;
-  margin-left: auto;
-  margin-right: auto;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
 }
 
-.about-footer-heading {
-  margin: 0 0 14px;
-  font-size: 1rem;
-  font-weight: 700;
+body.layout-landing .about-footer-card {
+  margin-top: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  padding: 26px 22px 24px;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.about-footer-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 28px;
+}
+
+@media (min-width: 640px) {
+  .about-footer-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+    gap: 32px 44px;
+    align-items: start;
+  }
+}
+
+.about-footer-title.landing-block-title {
+  margin-bottom: 6px;
   color: #ffffff;
-  letter-spacing: 0.02em;
 }
 
-.about-footer-links {
+.about-footer-lead {
+  margin: 0 0 14px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+body.layout-landing .about-footer-lead.muted {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.about-social-list {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
 }
 
-.about-footer-links a {
-  color: rgba(255, 255, 255, 0.78);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  font-size: 0.95rem;
-}
-
-.about-footer-links a:hover {
+.about-social-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   color: #ffffff;
+  text-decoration: none;
+  transition:
+    background 0.18s ease,
+    transform 0.18s ease,
+    border-color 0.18s ease;
 }
 
-.about-footer-apps {
-  margin-top: 40px;
+.about-social-link:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.28);
+  transform: translateY(-2px);
 }
 
-.about-store-badges {
+.about-social-link:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.85);
+  outline-offset: 3px;
+}
+
+.about-social-icon {
+  width: 26px;
+  height: 26px;
+  display: block;
+}
+
+.about-footer-cell--apps .about-store-badges {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 14px 20px;
+  gap: 14px 18px;
 }
 
 .about-badge-appstore {
-  height: 50px;
+  height: 48px;
   width: auto;
   display: block;
-  border-radius: 6px;
+  border-radius: 7px;
+  opacity: 0.95;
 }
 
 .about-badge-play {
-  height: 50px;
+  height: 48px;
   width: auto;
   display: block;
-  border-radius: 6px;
+  border-radius: 7px;
+  opacity: 0.95;
 }
 
 .about-coming-soon {
-  margin: 16px 0 0;
-  font-size: 0.95rem;
+  margin: 14px 0 0;
+  font-family: "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 0.87rem;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.55);
-  letter-spacing: 0.04em;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.48);
+  letter-spacing: 0.03em;
 }
 
 body.layout-landing .landing-status-msg {
