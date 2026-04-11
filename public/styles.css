@@ -1031,22 +1031,8 @@ select:focus {
   line-height: 1.35;
 }
 
-.owner-platform-admin {
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--md-sys-color-outline-variant);
-}
-
-.owner-platform-admin-btn {
-  margin-bottom: 0;
-}
-
-.owner-platform-admin-panel {
-  margin-top: 14px;
-  padding: 14px 16px;
-  border-radius: 12px;
-  background: var(--md-sys-color-surface-container-high);
-  border: 1px solid var(--md-sys-color-outline);
+.owner-tab--platform-admin {
+  border-color: rgba(201, 162, 39, 0.55);
 }
 
 .owner-platform-admin-lead {
@@ -1077,6 +1063,26 @@ select:focus {
   margin: 0 0 10px;
   font-size: 0.82rem;
   line-height: 1.45;
+}
+
+.owner-admin-load-note {
+  margin: 10px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.owner-admin-shop-mine {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: 999px;
+  background: rgba(201, 162, 39, 0.2);
+  color: var(--md-sys-color-on-surface);
+  vertical-align: middle;
 }
 
 .owner-admin-shops-wrap {

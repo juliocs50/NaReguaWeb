@@ -968,8 +968,8 @@ async function loadOwnerLocationPanel() {
 }
 
 function updatePlatformAdminVisibility() {
-  const wrap = $("ownerPlatformAdminWrap");
-  if (!wrap) return;
+  const tabBtn = $("ownerTabPlatformAdmin");
+  if (!tabBtn) return;
   let ok = false;
   try {
     const u = firebase.auth().currentUser;
@@ -980,24 +980,31 @@ function updatePlatformAdminVisibility() {
   } catch (_e) {
     ok = false;
   }
-  wrap.hidden = !ok;
+  tabBtn.hidden = !ok;
   if (!ok) {
-    const p = $("ownerPlatformAdminPanel");
-    if (p) p.hidden = true;
+    const panel = $("ownerPanelPlatformAdmin");
+    if (panel && !panel.hidden) {
+      switchOwnerTab("barbers");
+    }
   }
 }
 
 function renderAdminShopsTable(shops) {
   const wrap = $("ownerAdminShopsWrap");
   if (!wrap) return;
+  const myShopId = window.__ownerShopId || "";
   if (!shops || !shops.length) {
-    wrap.innerHTML = '<p class="muted">Nenhuma barbearia na base (ou sem dados).</p>';
+    wrap.innerHTML = '<p class="muted">Nenhuma barbearia na base.</p>';
     return;
   }
   const rows = shops
     .map(function (s) {
-      const name = escapeHtml(String(s.name || s.shopId || "—"));
-      const id = escapeHtml(String(s.shopId || ""));
+      const sid = String(s.shopId || "");
+      const mine = myShopId && sid === myShopId;
+      const name =
+        escapeHtml(String(s.name || sid || "—")) +
+        (mine ? ' <span class="owner-admin-shop-mine">(sua loja)</span>' : "");
+      const id = escapeHtml(sid);
       const n = Number(s.doneCount || 0);
       const cents = Number(s.totalAppFeeCents || 0);
       return (
@@ -1029,19 +1036,72 @@ function escapeHtml(s) {
     .replace(/"/g, "&quot;");
 }
 
+async function loadPlatformAdminDataViaFirestore() {
+  const codeSnap = await db.collection("admin_config").doc("signup").get();
+  const currentCode = codeSnap.exists ? String(codeSnap.get("currentCode") || "") : "";
+  const shopsSnap = await db.collection("barbershops").get();
+  const shops = [];
+  for (let i = 0; i < shopsSnap.docs.length; i++) {
+    const doc = shopsSnap.docs[i];
+    const shopId = doc.id;
+    const name = String(doc.get("name") || shopId);
+    let doneCount = 0;
+    let totalAppFeeCents = 0;
+    const apSnap = await db
+      .collection("barbershops")
+      .doc(shopId)
+      .collection("appointments")
+      .where("status", "==", "DONE")
+      .get();
+    apSnap.forEach(function (a) {
+      doneCount += 1;
+      totalAppFeeCents += Number(a.get("appFeeCents") || 0) || 0;
+    });
+    shops.push({ shopId, name, doneCount, totalAppFeeCents });
+  }
+  shops.sort(function (a, b) {
+    return String(a.name).localeCompare(String(b.name), "pt");
+  });
+  return { currentCode, shops };
+}
+
 async function loadPlatformAdminData() {
   const codeEl = $("ownerAdminSignupCode");
   const wrap = $("ownerAdminShopsWrap");
+  const note = $("ownerAdminLoadNote");
+  if (note) {
+    note.hidden = true;
+    note.textContent = "";
+  }
   if (wrap) wrap.innerHTML = "<p class=\"muted\">A carregar…</p>";
   await initFirebaseCore();
-  const fn = httpsCallable("adminGetSignupAndTotals");
-  const res = await fn({});
-  const data = res.data || {};
+  let data;
+  try {
+    const fn = httpsCallable("adminGetSignupAndTotals");
+    const res = await fn({});
+    data = res.data || {};
+  } catch (e) {
+    try {
+      data = await loadPlatformAdminDataViaFirestore();
+      if (note) {
+        note.textContent =
+          "Lista carregada diretamente do Firestore (Cloud Function indisponível ou a atualizar).";
+        note.hidden = false;
+      }
+    } catch (e2) {
+      const msg = mapCallableError(e) || (e2 && e2.message) || "Erro ao carregar.";
+      if (wrap) {
+        wrap.innerHTML = "<p class=\"muted err\">" + escapeHtml(msg) + "</p>";
+      }
+      if (codeEl) codeEl.textContent = "—";
+      return;
+    }
+  }
   if (codeEl) {
     codeEl.textContent =
       data.currentCode && String(data.currentCode).length > 0
         ? String(data.currentCode)
-        : "(primeiro cadastro: use o código inicial configurado na Cloud Function)";
+        : "(primeiro cadastro na web: juliocs50 ou INITIAL_SIGNUP_CODE na função)";
   }
   renderAdminShopsTable(data.shops || []);
 }
@@ -2242,6 +2302,7 @@ function switchOwnerTab(name) {
     menu: $("ownerPanelMenu"),
     finance: $("ownerPanelFinance"),
     location: $("ownerPanelLocation"),
+    platformAdmin: $("ownerPanelPlatformAdmin"),
   };
   Object.keys(map).forEach(function (k) {
     const el = map[k];
@@ -2265,6 +2326,12 @@ function switchOwnerTab(name) {
     showOwnerInboxFab(false);
   } else if (name === "location") {
     loadOwnerLocationPanel().catch(function () {});
+    stopOwnerInboxListener();
+    showOwnerInboxFab(false);
+  } else if (name === "platformAdmin") {
+    loadPlatformAdminData().catch(function (e) {
+      setOwnerStatus(mapCallableError(e), true);
+    });
     stopOwnerInboxListener();
     showOwnerInboxFab(false);
   }
@@ -3459,19 +3526,6 @@ async function init() {
     });
   }
 
-  const ownerPlatformAdminToggle = $("ownerPlatformAdminToggle");
-  const ownerPlatformAdminPanel = $("ownerPlatformAdminPanel");
-  if (ownerPlatformAdminToggle && ownerPlatformAdminPanel) {
-    ownerPlatformAdminToggle.addEventListener("click", function () {
-      const willShow = ownerPlatformAdminPanel.hidden;
-      ownerPlatformAdminPanel.hidden = !willShow;
-      if (willShow) {
-        loadPlatformAdminData().catch(function (e) {
-          setOwnerStatus(mapCallableError(e), true);
-        });
-      }
-    });
-  }
   const ownerAdminRefreshBtn = $("ownerAdminRefreshBtn");
   if (ownerAdminRefreshBtn) {
     ownerAdminRefreshBtn.addEventListener("click", function () {

@@ -188,6 +188,15 @@
           <button type="button" class="owner-tab" data-owner-tab="menu">Serviço</button>
           <button type="button" class="owner-tab" data-owner-tab="finance">Finanças</button>
           <button type="button" class="owner-tab" data-owner-tab="location">Localização</button>
+          <button
+            type="button"
+            class="owner-tab owner-tab--platform-admin"
+            id="ownerTabPlatformAdmin"
+            data-owner-tab="platformAdmin"
+            hidden
+          >
+            Admin
+          </button>
         </nav>
 
         <div id="ownerPanelBarbers" class="owner-panel card" data-panel="barbers">
@@ -293,33 +302,32 @@
           <div id="ownerFinanceBlurb" class="muted"></div>
         </div>
 
+        <div id="ownerPanelPlatformAdmin" class="owner-panel card" data-panel="platformAdmin" hidden>
+          <h3 class="subsection-title">Admin da plataforma</h3>
+          <p class="muted owner-platform-admin-lead">
+            Código de liberação atual (cadastro na web). Copie e envie por e-mail a quem for autorizado a
+            abrir barbearia.
+          </p>
+          <div class="owner-admin-code-row">
+            <code id="ownerAdminSignupCode" class="owner-admin-code">—</code>
+            <button type="button" id="ownerAdminCopyCodeBtn" class="btn btn-outline btn-sm">
+              Copiar código
+            </button>
+          </div>
+          <p class="muted owner-admin-finance-note">
+            Todas as barbearias (incluindo a sua). Totais da <strong>taxa do app</strong> (soma de
+            <code>appFeeCents</code> em atendimentos <strong>finalizados</strong> — o painel Finanças da loja
+            reparte 50% barbeiro / 50% app).
+          </p>
+          <button type="button" id="ownerAdminRefreshBtn" class="btn btn-filled btn-sm">
+            Atualizar lista
+          </button>
+          <p id="ownerAdminLoadNote" class="muted owner-admin-load-note" hidden></p>
+          <div id="ownerAdminShopsWrap" class="owner-admin-shops-wrap"></div>
+        </div>
+
         <div id="ownerPanelLocation" class="owner-panel card" data-panel="location" hidden>
           <h3 class="subsection-title">Localização</h3>
-          <div id="ownerPlatformAdminWrap" class="owner-platform-admin" hidden>
-            <button type="button" id="ownerPlatformAdminToggle" class="btn btn-outline owner-platform-admin-btn">
-              Admin plataforma
-            </button>
-            <div id="ownerPlatformAdminPanel" class="owner-platform-admin-panel" hidden>
-              <p class="muted owner-platform-admin-lead">
-                Código de liberação atual (cadastro na web). Copie e envie por e-mail a quem for autorizado a
-                abrir barbearia.
-              </p>
-              <div class="owner-admin-code-row">
-                <code id="ownerAdminSignupCode" class="owner-admin-code">—</code>
-                <button type="button" id="ownerAdminCopyCodeBtn" class="btn btn-outline btn-sm">
-                  Copiar código
-                </button>
-              </div>
-              <p class="muted owner-admin-finance-note">
-                Totais da <strong>taxa do app</strong> (100% de <code>appFeeCents</code> em atendimentos
-                finalizados — o painel Finanças da loja reparte 50% barbeiro / 50% app).
-              </p>
-              <button type="button" id="ownerAdminRefreshBtn" class="btn btn-filled btn-sm">
-                Atualizar lista
-              </button>
-              <div id="ownerAdminShopsWrap" class="owner-admin-shops-wrap"></div>
-            </div>
-          </div>
           <!-- Integração: Google Maps no cliente; chave em firebase-config.js -->
           <p class="muted owner-location-hint">
             Endereço completo da loja (rua, número, bairro, cidade). Assim os clientes encontram a
