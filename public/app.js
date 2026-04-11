@@ -235,6 +235,11 @@ async function initFirebaseCore() {
   if (!firebase.apps.length) {
     firebase.initializeApp(window.FIREBASE_CONFIG);
   }
+  try {
+    firebase.auth().languageCode = "pt";
+  } catch (_e) {
+    /* ignore */
+  }
   db = firebase.firestore();
   __firebaseCoreReady = true;
 }
