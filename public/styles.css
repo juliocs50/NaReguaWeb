@@ -288,6 +288,77 @@ body.layout-landing .landing-copyright {
   color: rgba(255, 255, 255, 0.38);
 }
 
+/* Rodapé da página Sobre (Saiba mais): redes + lojas */
+.about-page-footer {
+  margin-top: 48px;
+  padding-top: 40px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.about-footer-heading {
+  margin: 0 0 14px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.02em;
+}
+
+.about-footer-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.about-footer-links a {
+  color: rgba(255, 255, 255, 0.78);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-size: 0.95rem;
+}
+
+.about-footer-links a:hover {
+  color: #ffffff;
+}
+
+.about-footer-apps {
+  margin-top: 40px;
+}
+
+.about-store-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 20px;
+}
+
+.about-badge-appstore {
+  height: 50px;
+  width: auto;
+  display: block;
+  border-radius: 6px;
+}
+
+.about-badge-play {
+  height: 50px;
+  width: auto;
+  display: block;
+  border-radius: 6px;
+}
+
+.about-coming-soon {
+  margin: 16px 0 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 0.04em;
+}
+
 body.layout-landing .landing-status-msg {
   text-align: center;
   padding: 0 24px 20px;
