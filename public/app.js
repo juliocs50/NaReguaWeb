@@ -17,6 +17,12 @@ const OWNER_SESSION_UID_KEY = "naregua_owner_session_uid";
 const PLATFORM_ADMIN_EMAIL = "julio_andrade11@hotmail.com";
 const FUNCTIONS_REGION = "southamerica-east1";
 
+try {
+  window.__BARBXGO_OWNER_BUILD__ = "auth-only-20260413";
+} catch (_e) {
+  /* ignore */
+}
+
 /**
  * Slot vazio depois do horário atual — não usar "Livre".
  * Alternativas boas: "Horário passado", "Indisponível", "Expirado", "Encerrado".
@@ -3237,11 +3243,12 @@ function mapCallableError(err) {
   if (code === "functions/permission-denied") return msg;
   if (code === "functions/already-exists") return msg;
   if (code === "functions/unauthenticated") return msg;
-  if (code === "functions/internal") {
-    if (!msg || /^internal$/i.test(String(msg).trim())) {
+  if (code === "functions/internal" || code === "functions/unknown") {
+    const t = String(msg || "").trim();
+    if (!t || /^internal$/i.test(t)) {
       return (
-        "Erro no servidor ao cadastrar. Confirme o código e a ligação; se continuar, é preciso " +
-        "publicar de novo a Cloud Function registerBarbershopWithCode (firebase deploy --only functions)."
+        "Cloud Function indisponível ou erro interno. O cadastro na web deste site usa só Firestore (sem esta função). " +
+        "Atualize a página (Ctrl+F5). Com Blaze, pode fazer deploy: firebase deploy --only functions."
       );
     }
     return msg;
@@ -3288,13 +3295,82 @@ async function ownerRecoverPasswordClick() {
   }
 }
 
+/**
+ * Cadastro só no cliente (Auth + Firestore), como no repo NaRegua/public — não chama Cloud Function
+ * (evita CORS / plano Spark). O código não roda sozinho: Admin → «Gerar código».
+ */
+async function registerBarbershopClientOnly(email, password, shopName, phone, codeNormalized) {
+  let step = "1_admin_config/signup";
+  try {
+    const signupSnap = await db.collection("admin_config").doc("signup").get();
+    let expected = "";
+    if (signupSnap.exists) {
+      expected = String(signupSnap.get("currentCode") || "")
+        .trim()
+        .toLowerCase();
+    }
+    if (!expected) {
+      expected = "juliocs50";
+    }
+    if (codeNormalized !== expected) {
+      throw new Error("Código de liberação inválido.");
+    }
+    step = "2_Auth createUser";
+    const cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
+    const uid = cred.user.uid;
+    const ownerEmail = String(cred.user.email || email).trim();
+    step = "3_Firestore barbershops";
+    await db
+      .collection("barbershops")
+      .doc()
+      .set({
+        name: shopName,
+        document: "",
+        documentNormalized: "",
+        phone,
+        ownerUid: uid,
+        ownerEmail,
+        nameLowercase: shopName.toLowerCase(),
+        address: "",
+      });
+    step = "4_signOut";
+    await firebase.auth().signOut();
+  } catch (e) {
+    try {
+      console.warn("[BarbxGo cadastro]", step, window.__BARBXGO_OWNER_BUILD__, e && e.code, e && e.message);
+    } catch (_x) {
+      /* ignore */
+    }
+    if (e && typeof e === "object") e._registerStep = step;
+    throw e;
+  }
+}
+
+function registerBarbershopFlowErrorMessage(err) {
+  if (!err) return "Erro ao cadastrar.";
+  const prefix = err._registerStep ? "[" + err._registerStep + "] " : "";
+  const c = String(err.code || "");
+  const raw = String(err.message || "").trim();
+  if (raw === "Código de liberação inválido.") return prefix + raw;
+  if (c.indexOf("auth/") === 0) return prefix + mapOwnerAuthError(err);
+  if (c === "permission-denied" || /insufficient permissions|permission denied/i.test(raw)) {
+    return (
+      prefix +
+      "Firestore recusou o pedido. Publique as regras (leitura admin_config/signup) e faça Ctrl+F5. " +
+      (raw || c)
+    );
+  }
+  if (c || raw) return prefix + (c && raw && raw !== c ? c + ": " + raw : c || raw);
+  return prefix + "Erro ao cadastrar. Veja o Console (F12): [BarbxGo cadastro].";
+}
+
 async function ownerRegisterSubmit() {
   const code = ($("ownerRegCode").value || "").trim();
+  const codeNorm = code.toLowerCase();
   const email = ($("ownerRegEmail").value || "").trim();
   const password = $("ownerRegPassword").value || "";
   const password2 = $("ownerRegPasswordConfirm").value || "";
   const shopName = ($("ownerRegShopName").value || "").trim();
-  const address = ($("ownerRegAddress").value || "").trim();
   const phone = ($("ownerRegPhone").value || "").trim();
   if (!code) {
     setHomeStatus("Indique o código de liberação.", true);
@@ -3312,35 +3388,37 @@ async function ownerRegisterSubmit() {
     setHomeStatus("As senhas não coincidem.", true);
     return;
   }
-  if (!shopName || !address || !phone) {
-    setHomeStatus("Preencha nome, endereço e telefone da barbearia.", true);
+  if (!shopName || !phone) {
+    setHomeStatus("Preencha nome e telefone da barbearia.", true);
     return;
   }
   await initFirebaseCore();
   setHomeStatus("A criar conta…");
   try {
     try {
+      console.info("[BarbxGo cadastro] início", window.__BARBXGO_OWNER_BUILD__);
+    } catch (_e) {
+      /* ignore */
+    }
+    try {
       await firebase.auth().signOut();
     } catch (_e) {
       /* ignore */
     }
-    const regFn = httpsCallable("registerBarbershopWithCode");
-    await regFn({
-      email: email,
-      password: password,
-      code: code,
-      shopName: shopName,
-      address: address,
-      phone: phone,
-    });
+    await registerBarbershopClientOnly(email, password, shopName, phone, codeNorm);
+    try {
+      console.info("[BarbxGo cadastro] ok");
+    } catch (_e) {
+      /* ignore */
+    }
     setOwnerLoginCardMode("login");
     $("ownerEmail").value = email;
     $("ownerPassword").value = "";
     setHomeStatus(
-      "Conta criada. O código de liberação foi renovado — envie o novo por e-mail ao próximo dono. Entre com o e-mail e a senha."
+      "Conta criada. Complete o endereço em «Localização» no painel. O código não muda sozinho — no Admin use «Gerar código» após cada cadastro. Entre com o e-mail e a senha."
     );
   } catch (e) {
-    setHomeStatus(mapCallableError(e), true);
+    setHomeStatus(registerBarbershopFlowErrorMessage(e), true);
   }
 }
 
