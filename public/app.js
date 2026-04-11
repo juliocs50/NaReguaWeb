@@ -13,8 +13,9 @@ const INBOX_SOUND_ENABLED_KEY = "barbxgo_owner_inbox_sound";
 const OWNER_INBOX_LAST_CLOSED_PREFIX = "barbxgo_owner_inbox_last_closed_";
 /** Sessão do dono: uid esperado para o painel (evita misturar com anónimo). */
 const OWNER_SESSION_UID_KEY = "naregua_owner_session_uid";
-/** Código enviado manualmente por e-mail; altere quando tiver backend. */
-const OWNER_SIGNUP_CODE = "juliocs50";
+/** E-mail com painel admin (código atual + totais). Igual a firestore.rules / Cloud Function. */
+const PLATFORM_ADMIN_EMAIL = "julio_andrade11@hotmail.com";
+const FUNCTIONS_REGION = "southamerica-east1";
 
 /**
  * Slot vazio depois do horário atual — não usar "Livre".
@@ -240,8 +241,17 @@ async function initFirebaseCore() {
   } catch (_e) {
     /* ignore */
   }
+  try {
+    firebase.app().functions(FUNCTIONS_REGION);
+  } catch (_e) {
+    /* firebase-functions-compat opcional até primeiro uso */
+  }
   db = firebase.firestore();
   __firebaseCoreReady = true;
+}
+
+function httpsCallable(name) {
+  return firebase.app().functions(FUNCTIONS_REGION).httpsCallable(name);
 }
 
 /** Cliente em /slug: precisa de sessão (anónima) para ler Firestore. */
@@ -954,6 +964,86 @@ async function loadOwnerLocationPanel() {
   } catch (_e) {
     /* ignore */
   }
+  updatePlatformAdminVisibility();
+}
+
+function updatePlatformAdminVisibility() {
+  const wrap = $("ownerPlatformAdminWrap");
+  if (!wrap) return;
+  let ok = false;
+  try {
+    const u = firebase.auth().currentUser;
+    ok =
+      !!u &&
+      !u.isAnonymous &&
+      (u.email || "").toLowerCase() === PLATFORM_ADMIN_EMAIL.toLowerCase();
+  } catch (_e) {
+    ok = false;
+  }
+  wrap.hidden = !ok;
+  if (!ok) {
+    const p = $("ownerPlatformAdminPanel");
+    if (p) p.hidden = true;
+  }
+}
+
+function renderAdminShopsTable(shops) {
+  const wrap = $("ownerAdminShopsWrap");
+  if (!wrap) return;
+  if (!shops || !shops.length) {
+    wrap.innerHTML = '<p class="muted">Nenhuma barbearia na base (ou sem dados).</p>';
+    return;
+  }
+  const rows = shops
+    .map(function (s) {
+      const name = escapeHtml(String(s.name || s.shopId || "—"));
+      const id = escapeHtml(String(s.shopId || ""));
+      const n = Number(s.doneCount || 0);
+      const cents = Number(s.totalAppFeeCents || 0);
+      return (
+        "<tr><td>" +
+        name +
+        '<br><span class="muted" style="font-size:0.8rem">' +
+        id +
+        "</span></td><td class=\"num\">" +
+        n +
+        '</td><td class="num">' +
+        escapeHtml(priceToBRL(cents)) +
+        "</td></tr>"
+      );
+    })
+    .join("");
+  wrap.innerHTML =
+    '<table class="owner-admin-shops-table"><thead><tr>' +
+    "<th>Barbearia</th><th class=\"num\">Atend. finalizados</th>" +
+    '<th class="num">Total taxa app (R$)</th></tr></thead><tbody>' +
+    rows +
+    "</tbody></table>";
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+async function loadPlatformAdminData() {
+  const codeEl = $("ownerAdminSignupCode");
+  const wrap = $("ownerAdminShopsWrap");
+  if (wrap) wrap.innerHTML = "<p class=\"muted\">A carregar…</p>";
+  await initFirebaseCore();
+  const fn = httpsCallable("adminGetSignupAndTotals");
+  const res = await fn({});
+  const data = res.data || {};
+  if (codeEl) {
+    codeEl.textContent =
+      data.currentCode && String(data.currentCode).length > 0
+        ? String(data.currentCode)
+        : "(primeiro cadastro: use o código inicial configurado na Cloud Function)";
+  }
+  renderAdminShopsTable(data.shops || []);
 }
 
 function setFindShopStatus(msg, isError) {
@@ -2137,6 +2227,7 @@ function showOwnerPortalUI() {
   const t = $("ownerShopTitle");
   if (t) t.textContent = window.__ownerShopName || "Barbearia";
   hideShopHeader();
+  updatePlatformAdminVisibility();
   switchOwnerTab("barbers");
   refreshOwnerShopPublicUrl().catch(function () {});
 }
@@ -3031,6 +3122,18 @@ function setOwnerLoginCardMode(mode) {
   title.textContent = isReg ? "Cadastrar barbearia" : "Login da barbearia";
 }
 
+function mapCallableError(err) {
+  if (!err) return "Erro desconhecido.";
+  const code = err.code || "";
+  const msg = err.message || "Erro.";
+  if (code === "functions/invalid-argument") return msg;
+  if (code === "functions/permission-denied") return msg;
+  if (code === "functions/already-exists") return msg;
+  if (code === "functions/internal") return msg;
+  if (code === "functions/unauthenticated") return msg;
+  return msg;
+}
+
 function mapOwnerAuthError(err) {
   if (!err || !err.code) return err && err.message ? err.message : "Ocorreu um erro.";
   switch (err.code) {
@@ -3071,17 +3174,17 @@ async function ownerRecoverPasswordClick() {
 }
 
 async function ownerRegisterSubmit() {
-  const code = ($("ownerRegCode").value || "").trim().toLowerCase();
-  if (code !== OWNER_SIGNUP_CODE.toLowerCase()) {
-    setHomeStatus("Código de liberação inválido.", true);
-    return;
-  }
+  const code = ($("ownerRegCode").value || "").trim();
   const email = ($("ownerRegEmail").value || "").trim();
   const password = $("ownerRegPassword").value || "";
   const password2 = $("ownerRegPasswordConfirm").value || "";
   const shopName = ($("ownerRegShopName").value || "").trim();
   const address = ($("ownerRegAddress").value || "").trim();
   const phone = ($("ownerRegPhone").value || "").trim();
+  if (!code) {
+    setHomeStatus("Indique o código de liberação.", true);
+    return;
+  }
   if (!email) {
     setHomeStatus("Indique um e-mail válido.", true);
     return;
@@ -3106,28 +3209,23 @@ async function ownerRegisterSubmit() {
     } catch (_e) {
       /* ignore */
     }
-    const cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
-    const uid = cred.user.uid;
-    const ownerEmail = email.toLowerCase();
-    const data = {
-      name: shopName,
-      document: "",
-      documentNormalized: "",
-      phone,
-      ownerUid: uid,
-      ownerEmail,
-      nameLowercase: shopName.toLowerCase(),
-      address,
-    };
-    const ref = db.collection("barbershops").doc();
-    await ref.set(data);
-    await firebase.auth().signOut();
+    const regFn = httpsCallable("registerBarbershopWithCode");
+    await regFn({
+      email: email,
+      password: password,
+      code: code,
+      shopName: shopName,
+      address: address,
+      phone: phone,
+    });
     setOwnerLoginCardMode("login");
     $("ownerEmail").value = email;
     $("ownerPassword").value = "";
-    setHomeStatus("Conta criada. Entre com o e-mail e a senha.");
+    setHomeStatus(
+      "Conta criada. O código de liberação foi renovado — envie o novo por e-mail ao próximo dono. Entre com o e-mail e a senha."
+    );
   } catch (e) {
-    setHomeStatus(mapOwnerAuthError(e), true);
+    setHomeStatus(mapCallableError(e), true);
   }
 }
 
@@ -3360,6 +3458,43 @@ async function init() {
       });
     });
   }
+
+  const ownerPlatformAdminToggle = $("ownerPlatformAdminToggle");
+  const ownerPlatformAdminPanel = $("ownerPlatformAdminPanel");
+  if (ownerPlatformAdminToggle && ownerPlatformAdminPanel) {
+    ownerPlatformAdminToggle.addEventListener("click", function () {
+      const willShow = ownerPlatformAdminPanel.hidden;
+      ownerPlatformAdminPanel.hidden = !willShow;
+      if (willShow) {
+        loadPlatformAdminData().catch(function (e) {
+          setOwnerStatus(mapCallableError(e), true);
+        });
+      }
+    });
+  }
+  const ownerAdminRefreshBtn = $("ownerAdminRefreshBtn");
+  if (ownerAdminRefreshBtn) {
+    ownerAdminRefreshBtn.addEventListener("click", function () {
+      loadPlatformAdminData().catch(function (e) {
+        setOwnerStatus(mapCallableError(e), true);
+      });
+    });
+  }
+  const ownerAdminCopyCodeBtn = $("ownerAdminCopyCodeBtn");
+  if (ownerAdminCopyCodeBtn) {
+    ownerAdminCopyCodeBtn.addEventListener("click", function () {
+      const el = $("ownerAdminSignupCode");
+      const t = el && el.textContent ? el.textContent.trim() : "";
+      if (!t || t.indexOf("(") === 0) {
+        setOwnerStatus("Não há código para copiar. Atualize a lista.", true);
+        return;
+      }
+      copyTextToClipboard(t).then(function (ok) {
+        setOwnerStatus(ok ? "Código copiado." : "Não foi possível copiar.");
+      });
+    });
+  }
+
   $("findStubBack").addEventListener("click", function () {
     $("findStub").hidden = true;
     setLandingHeroVisible(true);

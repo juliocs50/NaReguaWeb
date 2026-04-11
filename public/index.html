@@ -15,6 +15,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
     <script src="firebase-config.js"></script>
     <script src="schedule-engine.js"></script>
   </head>
@@ -80,7 +81,8 @@
 
           <div id="ownerRegisterBlock" hidden>
             <p class="muted owner-register-hint">
-              Digite o código que enviámos por e-mail para liberar o cadastro.
+              Use o código de liberação que recebeu por e-mail. Cada cadastro na web gera um código novo —
+              só quem receber o código atual consegue registar.
             </p>
             <label class="field">
               <span class="field-label">Código de liberação</span>
@@ -293,6 +295,31 @@
 
         <div id="ownerPanelLocation" class="owner-panel card" data-panel="location" hidden>
           <h3 class="subsection-title">Localização</h3>
+          <div id="ownerPlatformAdminWrap" class="owner-platform-admin" hidden>
+            <button type="button" id="ownerPlatformAdminToggle" class="btn btn-outline owner-platform-admin-btn">
+              Admin plataforma
+            </button>
+            <div id="ownerPlatformAdminPanel" class="owner-platform-admin-panel" hidden>
+              <p class="muted owner-platform-admin-lead">
+                Código de liberação atual (cadastro na web). Copie e envie por e-mail a quem for autorizado a
+                abrir barbearia.
+              </p>
+              <div class="owner-admin-code-row">
+                <code id="ownerAdminSignupCode" class="owner-admin-code">—</code>
+                <button type="button" id="ownerAdminCopyCodeBtn" class="btn btn-outline btn-sm">
+                  Copiar código
+                </button>
+              </div>
+              <p class="muted owner-admin-finance-note">
+                Totais da <strong>taxa do app</strong> (100% de <code>appFeeCents</code> em atendimentos
+                finalizados — o painel Finanças da loja reparte 50% barbeiro / 50% app).
+              </p>
+              <button type="button" id="ownerAdminRefreshBtn" class="btn btn-filled btn-sm">
+                Atualizar lista
+              </button>
+              <div id="ownerAdminShopsWrap" class="owner-admin-shops-wrap"></div>
+            </div>
+          </div>
           <!-- Integração: Google Maps no cliente; chave em firebase-config.js -->
           <p class="muted owner-location-hint">
             Endereço completo da loja (rua, número, bairro, cidade). Assim os clientes encontram a

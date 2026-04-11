@@ -1031,6 +1031,82 @@ select:focus {
   line-height: 1.35;
 }
 
+.owner-platform-admin {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.owner-platform-admin-btn {
+  margin-bottom: 0;
+}
+
+.owner-platform-admin-panel {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--md-sys-color-surface-container-high);
+  border: 1px solid var(--md-sys-color-outline);
+}
+
+.owner-platform-admin-lead {
+  margin: 0 0 10px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.owner-admin-code-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.owner-admin-code {
+  display: inline-block;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--md-sys-color-surface);
+  border: 1px solid var(--md-sys-color-outline);
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+}
+
+.owner-admin-finance-note {
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.owner-admin-shops-wrap {
+  margin-top: 12px;
+  overflow-x: auto;
+}
+
+.owner-admin-shops-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.owner-admin-shops-table th,
+.owner-admin-shops-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.owner-admin-shops-table th {
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.owner-admin-shops-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .owner-location-hint {
   margin: 0 0 12px;
   line-height: 1.5;
