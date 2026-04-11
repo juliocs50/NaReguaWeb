@@ -869,6 +869,37 @@ select:focus {
   margin-top: 8px;
 }
 
+.landing-login-secondary {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.landing-login-wide {
+  flex: 1 1 200px;
+  min-width: 160px;
+}
+
+.landing-login-link {
+  flex: 0 1 auto;
+  text-decoration: underline;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.85);
+  padding: 8px 4px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.owner-register-hint {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
 .find-stub {
   margin-top: 20px;
   padding-top: 16px;

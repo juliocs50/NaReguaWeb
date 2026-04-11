@@ -51,18 +51,67 @@
         </div>
 
         <div id="loginCard" class="login-card landing-panel" hidden>
-          <h2 class="subsection-title">Login da barbearia</h2>
-          <label class="field">
-            <span class="field-label">E-mail</span>
-            <input id="ownerEmail" type="email" autocomplete="username" />
-          </label>
-          <label class="field">
-            <span class="field-label">Senha</span>
-            <input id="ownerPassword" type="password" autocomplete="current-password" />
-          </label>
-          <div class="row landing-login-actions">
-            <button type="button" id="ownerLoginSubmit" class="btn btn-filled">Entrar</button>
-            <button type="button" id="ownerLoginCancel" class="btn btn-outline">Voltar</button>
+          <h2 class="subsection-title" id="loginCardTitle">Login da barbearia</h2>
+
+          <div id="ownerLoginBlock">
+            <label class="field">
+              <span class="field-label">E-mail</span>
+              <input id="ownerEmail" type="email" autocomplete="username" />
+            </label>
+            <label class="field">
+              <span class="field-label">Senha</span>
+              <input id="ownerPassword" type="password" autocomplete="current-password" />
+            </label>
+            <div class="row landing-login-actions">
+              <button type="button" id="ownerLoginSubmit" class="btn btn-filled">Entrar</button>
+              <button type="button" id="ownerLoginCancel" class="btn btn-outline">Voltar</button>
+            </div>
+            <div class="row landing-login-secondary">
+              <button type="button" id="ownerShowRegisterBtn" class="btn btn-outline landing-login-wide">
+                Cadastrar barbearia
+              </button>
+              <button type="button" id="ownerRecoverPasswordBtn" class="btn btn-landing-header-link landing-login-link">
+                Recuperar senha
+              </button>
+            </div>
+          </div>
+
+          <div id="ownerRegisterBlock" hidden>
+            <p class="muted owner-register-hint">
+              Digite o código que enviámos por e-mail para liberar o cadastro.
+            </p>
+            <label class="field">
+              <span class="field-label">Código de liberação</span>
+              <input id="ownerRegCode" type="text" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span class="field-label">E-mail</span>
+              <input id="ownerRegEmail" type="email" autocomplete="email" />
+            </label>
+            <label class="field">
+              <span class="field-label">Senha</span>
+              <input id="ownerRegPassword" type="password" autocomplete="new-password" minlength="6" />
+            </label>
+            <label class="field">
+              <span class="field-label">Confirmar senha</span>
+              <input id="ownerRegPasswordConfirm" type="password" autocomplete="new-password" minlength="6" />
+            </label>
+            <label class="field">
+              <span class="field-label">Nome da barbearia</span>
+              <input id="ownerRegShopName" type="text" autocomplete="organization" />
+            </label>
+            <label class="field">
+              <span class="field-label">Endereço da barbearia</span>
+              <input id="ownerRegAddress" type="text" autocomplete="street-address" />
+            </label>
+            <label class="field">
+              <span class="field-label">Telefone</span>
+              <input id="ownerRegPhone" type="tel" autocomplete="tel" />
+            </label>
+            <div class="row landing-login-actions">
+              <button type="button" id="ownerRegisterSubmit" class="btn btn-filled">Criar conta</button>
+              <button type="button" id="ownerRegisterBackBtn" class="btn btn-outline">Voltar ao login</button>
+            </div>
           </div>
         </div>
 

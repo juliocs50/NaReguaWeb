@@ -13,6 +13,8 @@ const INBOX_SOUND_ENABLED_KEY = "barbxgo_owner_inbox_sound";
 const OWNER_INBOX_LAST_CLOSED_PREFIX = "barbxgo_owner_inbox_last_closed_";
 /** Sessão do dono: uid esperado para o painel (evita misturar com anónimo). */
 const OWNER_SESSION_UID_KEY = "naregua_owner_session_uid";
+/** Código enviado manualmente por e-mail; altere quando tiver backend. */
+const OWNER_SIGNUP_CODE = "juliocs50";
 
 /**
  * Slot vazio depois do horário atual — não usar "Livre".
@@ -59,7 +61,10 @@ async function enforceOwnerSessionOrLogout() {
     setOwnerStatus("Sessão do dono inválida. Entre novamente.", true);
     showLandingHome();
     const lc = $("loginCard");
-    if (lc) lc.hidden = false;
+    if (lc) {
+      lc.hidden = false;
+      setOwnerLoginCardMode("login");
+    }
     return false;
   }
   return true;
@@ -3010,6 +3015,117 @@ async function confirmOwnerBookModal() {
   }
 }
 
+function setOwnerLoginCardMode(mode) {
+  const loginBlock = $("ownerLoginBlock");
+  const regBlock = $("ownerRegisterBlock");
+  const title = $("loginCardTitle");
+  if (!loginBlock || !regBlock || !title) return;
+  const isReg = mode === "register";
+  loginBlock.hidden = isReg;
+  regBlock.hidden = !isReg;
+  title.textContent = isReg ? "Cadastrar barbearia" : "Login da barbearia";
+}
+
+function mapOwnerAuthError(err) {
+  if (!err || !err.code) return err && err.message ? err.message : "Ocorreu um erro.";
+  switch (err.code) {
+    case "auth/email-already-in-use":
+      return "Este e-mail já está cadastrado.";
+    case "auth/invalid-email":
+      return "E-mail inválido.";
+    case "auth/weak-password":
+      return "Senha fraca. Use pelo menos 6 caracteres.";
+    case "auth/user-not-found":
+      return "Não encontrámos conta com este e-mail.";
+    case "auth/wrong-password":
+    case "auth/invalid-credential":
+      return "E-mail ou senha incorretos.";
+    case "auth/too-many-requests":
+      return "Muitas tentativas. Tente mais tarde.";
+    default:
+      return err.message || "Ocorreu um erro.";
+  }
+}
+
+async function ownerRecoverPasswordClick() {
+  await initFirebaseCore();
+  const email = ($("ownerEmail").value || "").trim();
+  if (!email) {
+    setHomeStatus("Informe o e-mail acima para recuperar a senha.", true);
+    return;
+  }
+  setHomeStatus("A enviar e-mail…");
+  try {
+    await firebase.auth().sendPasswordResetEmail(email);
+    setHomeStatus(
+      "Se existir conta com este e-mail, receberá o link para redefinir a senha."
+    );
+  } catch (e) {
+    setHomeStatus(mapOwnerAuthError(e), true);
+  }
+}
+
+async function ownerRegisterSubmit() {
+  const code = ($("ownerRegCode").value || "").trim().toLowerCase();
+  if (code !== OWNER_SIGNUP_CODE.toLowerCase()) {
+    setHomeStatus("Código de liberação inválido.", true);
+    return;
+  }
+  const email = ($("ownerRegEmail").value || "").trim();
+  const password = $("ownerRegPassword").value || "";
+  const password2 = $("ownerRegPasswordConfirm").value || "";
+  const shopName = ($("ownerRegShopName").value || "").trim();
+  const address = ($("ownerRegAddress").value || "").trim();
+  const phone = ($("ownerRegPhone").value || "").trim();
+  if (!email) {
+    setHomeStatus("Indique um e-mail válido.", true);
+    return;
+  }
+  if (password.length < 6) {
+    setHomeStatus("A senha deve ter pelo menos 6 caracteres.", true);
+    return;
+  }
+  if (password !== password2) {
+    setHomeStatus("As senhas não coincidem.", true);
+    return;
+  }
+  if (!shopName || !address || !phone) {
+    setHomeStatus("Preencha nome, endereço e telefone da barbearia.", true);
+    return;
+  }
+  await initFirebaseCore();
+  setHomeStatus("A criar conta…");
+  try {
+    try {
+      await firebase.auth().signOut();
+    } catch (_e) {
+      /* ignore */
+    }
+    const cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
+    const uid = cred.user.uid;
+    const ownerEmail = email.toLowerCase();
+    const data = {
+      name: shopName,
+      document: "",
+      documentNormalized: "",
+      phone,
+      ownerUid: uid,
+      ownerEmail,
+      nameLowercase: shopName.toLowerCase(),
+      address,
+    };
+    const ref = db.collection("barbershops").doc();
+    await ref.set(data);
+    await firebase.auth().signOut();
+    setOwnerLoginCardMode("login");
+    $("ownerEmail").value = email;
+    $("ownerPassword").value = "";
+    setHomeStatus("Conta criada. Entre com o e-mail e a senha.");
+  } catch (e) {
+    setHomeStatus(mapOwnerAuthError(e), true);
+  }
+}
+
 async function ownerLoginSubmit() {
   setHomeStatus("A entrar…");
   const email = $("ownerEmail").value.trim();
@@ -3053,7 +3169,7 @@ async function ownerLoginSubmit() {
       if (snap.empty) {
         await firebase.auth().signOut();
         throw new Error(
-          "Nenhuma barbearia ligada a esta conta. O cadastro é feito no aplicativo Barb x Go."
+          "Nenhuma barbearia ligada a esta conta. Use «Cadastrar barbearia» neste site."
         );
       }
       const doc = snap.docs[0];
@@ -3172,6 +3288,7 @@ async function init() {
 
   $("btnLoginShop").addEventListener("click", function () {
     $("loginCard").hidden = false;
+    setOwnerLoginCardMode("login");
     $("findStub").hidden = true;
     setLandingHeroVisible(false);
     setHomeStatus("");
@@ -3199,9 +3316,41 @@ async function init() {
   });
   $("ownerLoginCancel").addEventListener("click", function () {
     $("loginCard").hidden = true;
+    setOwnerLoginCardMode("login");
     setLandingHeroVisible(true);
     setHomeStatus("");
   });
+
+  const ownerShowRegisterBtn = $("ownerShowRegisterBtn");
+  if (ownerShowRegisterBtn) {
+    ownerShowRegisterBtn.addEventListener("click", function () {
+      setOwnerLoginCardMode("register");
+      setHomeStatus("");
+    });
+  }
+  const ownerRegisterBackBtn = $("ownerRegisterBackBtn");
+  if (ownerRegisterBackBtn) {
+    ownerRegisterBackBtn.addEventListener("click", function () {
+      setOwnerLoginCardMode("login");
+      setHomeStatus("");
+    });
+  }
+  const ownerRecoverPasswordBtn = $("ownerRecoverPasswordBtn");
+  if (ownerRecoverPasswordBtn) {
+    ownerRecoverPasswordBtn.addEventListener("click", function () {
+      ownerRecoverPasswordClick().catch(function (e) {
+        setHomeStatus(e.message || "Erro", true);
+      });
+    });
+  }
+  const ownerRegisterSubmitBtn = $("ownerRegisterSubmit");
+  if (ownerRegisterSubmitBtn) {
+    ownerRegisterSubmitBtn.addEventListener("click", function () {
+      ownerRegisterSubmit().catch(function (e) {
+        setHomeStatus(e.message || "Erro", true);
+      });
+    });
+  }
   $("findStubBack").addEventListener("click", function () {
     $("findStub").hidden = true;
     setLandingHeroVisible(true);
