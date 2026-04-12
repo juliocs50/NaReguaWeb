@@ -7,7 +7,8 @@
 
 const $ = (id) => document.getElementById(id);
 
-const APP_FEE_CENTS = 100;
+/** Taxa do app por agendamento (centavos). 0 = sem taxa; painel Finanças esconde colunas/KPIs da taxa quando o total do mês é 0. */
+const APP_FEE_CENTS = 0;
 const INBOX_SOUND_ENABLED_KEY = "barbxgo_owner_inbox_sound";
 /** Por barbearia + barbeiro: última vez que o painel Log foi fechado (para fundo claro/escuro). */
 const OWNER_INBOX_LAST_CLOSED_PREFIX = "barbxgo_owner_inbox_last_closed_";
@@ -2562,12 +2563,25 @@ async function loadOwnerFinancePanel() {
     agg[barberId].appFeeCents += fee;
   });
 
+  const showAppFeeUi = appFeeSum > 0;
+
   const serviceEl = $("ownerFinanceServiceTotal");
   const feeEl = $("ownerFinanceAppFeeTotal");
   const chargedEl = $("ownerFinanceChargedTotal");
   if (serviceEl) serviceEl.textContent = priceToBRL(serviceSum);
   if (feeEl) feeEl.textContent = priceToBRL(appFeeSum);
   if (chargedEl) chargedEl.textContent = priceToBRL(serviceSum + appFeeSum);
+
+  const feeKpiWrap = $("ownerFinanceKpiAppFeeWrap");
+  if (feeKpiWrap) feeKpiWrap.hidden = !showAppFeeUi;
+
+  const mainSummary = $("ownerFinanceSummaryMain");
+  if (mainSummary) {
+    mainSummary.classList.toggle("owner-finance-summary--two-cols", !showAppFeeUi);
+  }
+
+  const feeSplitSummary = $("ownerFinanceSummaryFeeSplit");
+  if (feeSplitSummary) feeSplitSummary.hidden = !showAppFeeUi;
 
   const barberBonusEl = $("ownerFinanceBarberBonusTotal");
   const appProfitEl = $("ownerFinanceAppProfitTotal");
@@ -2586,14 +2600,19 @@ async function loadOwnerFinancePanel() {
         '<p class="muted" style="padding:12px">Cadastre barbeiros primeiro.</p>';
     } else {
       const head = document.createElement("div");
-      head.className = "owner-fin-row owner-fin-head";
-      head.innerHTML =
-        "<div class=\"owner-fin-cell owner-fin-cell--name\">Barbeiro</div>" +
-        "<div class=\"owner-fin-cell owner-fin-cell--num\">DONE</div>" +
-        "<div class=\"owner-fin-cell owner-fin-cell--money\">Serviços</div>" +
-        "<div class=\"owner-fin-cell owner-fin-cell--money\">Taxa app</div>" +
-        "<div class=\"owner-fin-cell owner-fin-cell--money\">Total</div>" +
-        "<div class=\"owner-fin-cell owner-fin-cell--money\">Bônus (50%)</div>";
+      head.className =
+        "owner-fin-row owner-fin-head" + (showAppFeeUi ? "" : " owner-fin-row--no-fee");
+      head.innerHTML = showAppFeeUi
+        ? "<div class=\"owner-fin-cell owner-fin-cell--name\">Barbeiro</div>" +
+          "<div class=\"owner-fin-cell owner-fin-cell--num\">DONE</div>" +
+          "<div class=\"owner-fin-cell owner-fin-cell--money\">Serviços</div>" +
+          "<div class=\"owner-fin-cell owner-fin-cell--money\">Taxa app</div>" +
+          "<div class=\"owner-fin-cell owner-fin-cell--money\">Total</div>" +
+          "<div class=\"owner-fin-cell owner-fin-cell--money\">Bônus (50%)</div>"
+        : "<div class=\"owner-fin-cell owner-fin-cell--name\">Barbeiro</div>" +
+          "<div class=\"owner-fin-cell owner-fin-cell--num\">DONE</div>" +
+          "<div class=\"owner-fin-cell owner-fin-cell--money\">Serviços</div>" +
+          "<div class=\"owner-fin-cell owner-fin-cell--money\">Total</div>";
       table.appendChild(head);
 
       barbers.forEach(function (b) {
@@ -2602,7 +2621,7 @@ async function loadOwnerFinancePanel() {
         const bonus = Math.round(st.appFeeCents / 2);
 
         const row = document.createElement("div");
-        row.className = "owner-fin-row";
+        row.className = "owner-fin-row" + (showAppFeeUi ? "" : " owner-fin-row--no-fee");
 
         const cName = document.createElement("div");
         cName.className = "owner-fin-cell owner-fin-cell--name";
@@ -2616,24 +2635,26 @@ async function loadOwnerFinancePanel() {
         cSvc.className = "owner-fin-cell owner-fin-cell--money";
         cSvc.textContent = priceToBRL(st.serviceCents);
 
-        const cFee = document.createElement("div");
-        cFee.className = "owner-fin-cell owner-fin-cell--money";
-        cFee.textContent = priceToBRL(st.appFeeCents);
-
         const cTot = document.createElement("div");
         cTot.className = "owner-fin-cell owner-fin-cell--money";
         cTot.textContent = priceToBRL(total);
 
-        const cBonus = document.createElement("div");
-        cBonus.className = "owner-fin-cell owner-fin-cell--money";
-        cBonus.textContent = priceToBRL(bonus);
-
         row.appendChild(cName);
         row.appendChild(cDone);
         row.appendChild(cSvc);
-        row.appendChild(cFee);
+        if (showAppFeeUi) {
+          const cFee = document.createElement("div");
+          cFee.className = "owner-fin-cell owner-fin-cell--money";
+          cFee.textContent = priceToBRL(st.appFeeCents);
+          row.appendChild(cFee);
+        }
         row.appendChild(cTot);
-        row.appendChild(cBonus);
+        if (showAppFeeUi) {
+          const cBonus = document.createElement("div");
+          cBonus.className = "owner-fin-cell owner-fin-cell--money";
+          cBonus.textContent = priceToBRL(bonus);
+          row.appendChild(cBonus);
+        }
         table.appendChild(row);
       });
     }
@@ -3214,7 +3235,7 @@ async function confirmOwnerBookModal() {
         servicePriceCents: service.priceCents,
         status: "SCHEDULED",
         createdBy: "BARBER",
-        appFeeCents: 0,
+        appFeeCents: APP_FEE_CENTS,
       });
     closeOwnerBookModal();
     await loadOwnerAgendaPanel();
