@@ -870,6 +870,26 @@ body.layout-landing .landing-contact-btn.btn-filled {
   color: var(--ok);
 }
 
+.agenda-badge-unavailable {
+  background: rgba(120, 80, 90, 0.35);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.owner-block-slot-btn {
+  margin-right: 8px;
+  font-size: 0.75rem;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--md-sys-color-outline);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--md-sys-color-on-surface);
+  cursor: pointer;
+}
+
+.owner-block-slot-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .day-agenda-name {
   font-weight: 500;
   flex: 1;

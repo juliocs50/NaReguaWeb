@@ -1454,6 +1454,12 @@ function renderDayAgenda(barber, dateKey, appointmentsForBarber) {
         svc.textContent = r.serviceName;
         body.appendChild(svc);
       }
+    } else if (r.state === "unavailable") {
+      row.classList.add("is-unavailable");
+      const badge = document.createElement("span");
+      badge.className = "agenda-badge agenda-badge-unavailable";
+      badge.textContent = "Indisponível";
+      body.appendChild(badge);
     } else {
       row.classList.add("is-scheduled");
       const badge = document.createElement("span");
@@ -2689,9 +2695,68 @@ async function addOwnerDelayMinutes(shopId, dateKey, barberId, delta) {
   );
 }
 
+/** Bloqueia o slot (igual app Android — RESERVED + Indisponível). */
+async function ownerReserveSlot(shopId, barberId, dateKey, timeLabel) {
+  if (!confirm("Bloquear este horário (fica indisponível para clientes)?")) return;
+  await initFirebaseCore();
+  if (!(await enforceOwnerSessionOrLogout())) return;
+  let services = window.__ownerServicesCache;
+  if (!services || !services.length) {
+    services = await loadServices(shopId);
+    window.__ownerServicesCache = services;
+  }
+  if (!services.length) {
+    setOwnerStatus("Cadastre serviços na secção Serviço primeiro.", true);
+    return;
+  }
+  const service = services[0];
+  const daySnap = await db
+    .collection("barbershops")
+    .doc(shopId)
+    .collection("appointments")
+    .where("dateKey", "==", dateKey)
+    .get();
+  let occupied = false;
+  daySnap.docs.forEach(function (doc) {
+    const d = doc.data() || {};
+    if ((d.status || "SCHEDULED") === "CANCELLED") return;
+    if (String(d.barberId) === String(barberId) && String(d.timeLabel || "") === String(timeLabel)) {
+      occupied = true;
+    }
+  });
+  if (occupied) {
+    setOwnerStatus("Este horário já está ocupado ou bloqueado.", true);
+    return;
+  }
+  const id =
+    typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : String(Date.now()) + Math.random().toString(36).slice(2);
+  await db
+    .collection("barbershops")
+    .doc(shopId)
+    .collection("appointments")
+    .doc(id)
+    .set({
+      shopId: shopId,
+      barberId: barberId,
+      dateKey: dateKey,
+      timeLabel: timeLabel,
+      clientName: "Indisponível",
+      serviceId: service.id,
+      serviceName: service.name,
+      servicePriceCents: service.priceCents,
+      status: "RESERVED",
+      createdBy: "BARBER",
+      appFeeCents: 0,
+    });
+  setOwnerStatus("Horário bloqueado.");
+}
+
 function appendOwnerSlotActions(body, r, shopId) {
   const id = r.appointmentId;
   if (!id) return;
+  if (r.state === "unavailable") return;
   const wrap = document.createElement("div");
   wrap.className = "owner-slot-actions";
   if (r.state === "scheduled") {
@@ -2761,6 +2826,25 @@ async function ownerStartAppointment(shopId, apptId) {
     });
   } catch (_e) {
     /* ignore */
+  }
+}
+
+async function ownerReleaseReservedSlot(shopId, apptId) {
+  if (!confirm("Liberar este horário (fica livre de novo)?")) return;
+  await initFirebaseCore();
+  if (!(await enforceOwnerSessionOrLogout())) return;
+  const ref = db
+    .collection("barbershops")
+    .doc(shopId)
+    .collection("appointments")
+    .doc(apptId);
+  try {
+    setOwnerStatus("A liberar…");
+    await ref.update({ status: "CANCELLED", cancelledAtMillis: Date.now() });
+    setOwnerStatus("Horário liberado.");
+  } catch (e) {
+    setOwnerStatus(e.message || "Erro ao liberar.", true);
+    throw e;
   }
 }
 
@@ -2907,6 +2991,18 @@ function renderOwnerAgendaRow(rowEl, r, shopId, barberId, dateKey, barber) {
     b.className = "agenda-badge agenda-badge-free";
     b.textContent = "Livre";
     body.appendChild(b);
+    const actions = document.createElement("div");
+    actions.className = "owner-slot-actions";
+    const blockBtn = document.createElement("button");
+    blockBtn.type = "button";
+    blockBtn.textContent = "Cancelar horário";
+    blockBtn.className = "owner-block-slot-btn";
+    blockBtn.addEventListener("click", function () {
+      ownerReserveSlot(shopId, barberId, dateKey, r.timeLabel).catch(function (e) {
+        setOwnerStatus(e.message || "Erro", true);
+      });
+    });
+    actions.appendChild(blockBtn);
     const mb = document.createElement("button");
     mb.type = "button";
     mb.textContent = "Marcar (barbeiro)";
@@ -2917,7 +3013,27 @@ function renderOwnerAgendaRow(rowEl, r, shopId, barberId, dateKey, barber) {
         }
       );
     });
-    body.appendChild(mb);
+    actions.appendChild(mb);
+    body.appendChild(actions);
+  } else if (r.state === "unavailable") {
+    rowEl.classList.add("is-unavailable");
+    const badge = document.createElement("span");
+    badge.className = "agenda-badge agenda-badge-unavailable";
+    badge.textContent = "Indisponível";
+    body.appendChild(badge);
+    const id = r.appointmentId;
+    if (id) {
+      const lb = document.createElement("button");
+      lb.type = "button";
+      lb.textContent = "Liberar horário";
+      lb.className = "danger";
+      lb.addEventListener("click", function () {
+        ownerReleaseReservedSlot(shopId, id).catch(function (e) {
+          setOwnerStatus(e.message || "Erro", true);
+        });
+      });
+      body.appendChild(lb);
+    }
   } else {
     const stLabel =
       r.state === "done"

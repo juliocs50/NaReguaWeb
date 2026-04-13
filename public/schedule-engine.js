@@ -115,6 +115,27 @@
     return nm > sm;
   }
 
+  function foldLatinAccents(s) {
+    let n = String(s || "").trim().toLowerCase();
+    if (typeof n.normalize === "function") {
+      try {
+        n = n.normalize("NFC").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      } catch (_e) {
+        /* ignore */
+      }
+    }
+    return n;
+  }
+
+  /** Bloqueio pelo barbeiro (app Android) — RESERVED / nome Indisponível. */
+  function isUnavailableAppointment(a) {
+    if (!a) return false;
+    const st = String(a.status || "").trim().toUpperCase();
+    if (st === "RESERVED") return true;
+    const f = foldLatinAccents(a.clientName || "");
+    return f === "indisponivel" || f === "reservado";
+  }
+
   function appointmentRowFromDoc(a) {
     const st = a.status || "SCHEDULED";
     const base = {
@@ -135,6 +156,13 @@
       return Object.assign({}, base, {
         state: "in_progress",
         clientName: a.clientName || "—",
+      });
+    }
+    if (isUnavailableAppointment(a)) {
+      return Object.assign({}, base, {
+        state: "unavailable",
+        clientName: "",
+        serviceName: "",
       });
     }
     return Object.assign({}, base, {
@@ -170,7 +198,8 @@
 
     const byTime = {};
     active.forEach(function (a) {
-      if (a.timeLabel) byTime[a.timeLabel] = a;
+      const tl = String(a.timeLabel || "").trim();
+      if (tl) byTime[tl] = a;
     });
 
     const start = parseMinutes(day.startTime);
