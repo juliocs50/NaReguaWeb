@@ -153,6 +153,166 @@ function normalizeWeekdayLabel(n) {
   return ["", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"][n] || "";
 }
 
+// ===== Owner Inbox (Log) =====
+const INBOX_SOUND_ENABLED_KEY = "barbxgo_owner_inbox_sound";
+const OWNER_INBOX_LAST_CLOSED_PREFIX = "barbxgo_owner_inbox_last_closed_";
+
+let ownerInboxPollTimer = null;
+let ownerInboxOverlayOpen = false;
+let ownerInboxUnread = 0;
+
+function ownerInboxLastClosedStorageKey(shopId, barberId) {
+  const s = String(shopId || "").replace(/\|/g, "");
+  const b = String(barberId || "").replace(/\|/g, "");
+  return OWNER_INBOX_LAST_CLOSED_PREFIX + s + "|" + b;
+}
+
+function getOwnerInboxLastClosedMillis(shopId, barberId) {
+  try {
+    const raw = localStorage.getItem(ownerInboxLastClosedStorageKey(shopId, barberId));
+    if (raw != null && raw !== "") {
+      const n = Number(raw);
+      if (Number.isFinite(n) && n >= 0) return n;
+    }
+  } catch (_e) {}
+  return Number.POSITIVE_INFINITY;
+}
+
+function setOwnerInboxLastClosedNow(shopId, barberId) {
+  if (!shopId) return;
+  try {
+    localStorage.setItem(ownerInboxLastClosedStorageKey(shopId, barberId), String(Date.now()));
+  } catch (_e) {}
+}
+
+function isInboxSoundEnabled() {
+  try {
+    return localStorage.getItem(INBOX_SOUND_ENABLED_KEY) === "1";
+  } catch (_e) {
+    return false;
+  }
+}
+
+function setInboxSoundEnabled(v) {
+  try {
+    localStorage.setItem(INBOX_SOUND_ENABLED_KEY, v ? "1" : "0");
+  } catch (_e) {}
+}
+
+function playInboxBeep() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = "sine";
+    o.frequency.value = 880;
+    g.gain.value = 0.05;
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.start();
+    setTimeout(function () {
+      try {
+        o.stop();
+        ctx.close();
+      } catch (_e) {}
+    }, 180);
+  } catch (_e) {}
+}
+
+function setOwnerInboxBadge(n) {
+  const b = $("ownerInboxBadge");
+  if (!b) return;
+  const v = Number(n || 0);
+  b.hidden = v <= 0;
+  b.textContent = v > 9 ? "9+" : String(v);
+}
+
+function showOwnerInboxFab(show) {
+  const fab = $("ownerInboxFab");
+  if (!fab) return;
+  fab.hidden = !show;
+}
+
+function renderOwnerInboxItem(msg, lastClosedMillis) {
+  const wrap = document.createElement("div");
+  wrap.className = "owner-inbox-item";
+  const t = Number(msg.createdAtMillis || 0);
+  const unread = Number.isFinite(lastClosedMillis) && t > lastClosedMillis;
+  wrap.classList.add(unread ? "owner-inbox-item--unread" : "owner-inbox-item--read");
+  const head = document.createElement("div");
+  head.className = "owner-inbox-item-head";
+  const title = document.createElement("p");
+  title.className = "owner-inbox-item-title";
+  title.textContent = msg.title || "Mensagem";
+  const time = document.createElement("span");
+  time.className = "owner-inbox-item-time";
+  time.textContent = new Date(msg.createdAtMillis || Date.now()).toLocaleString("pt-BR");
+  head.appendChild(title);
+  head.appendChild(time);
+  const body = document.createElement("div");
+  body.className = "owner-inbox-item-body";
+  body.textContent = msg.text || "";
+  wrap.appendChild(head);
+  wrap.appendChild(body);
+  return { el: wrap, unread };
+}
+
+function openOwnerInboxOverlay(open) {
+  ownerInboxOverlayOpen = !!open;
+  const ov = $("ownerInboxOverlay");
+  if (ov) ov.hidden = !ownerInboxOverlayOpen;
+  if (ownerInboxOverlayOpen) {
+    ownerInboxUnread = 0;
+    setOwnerInboxBadge(0);
+    const list = $("ownerInboxList");
+    if (list) list.scrollTop = list.scrollHeight;
+  } else {
+    const shopId = window.__ownerShopId;
+    const sel = $("ownerAgendaBarberSelect");
+    const barberId = sel && sel.value ? String(sel.value) : "";
+    setOwnerInboxLastClosedNow(shopId, barberId);
+  }
+}
+
+async function loadOwnerInboxOnce() {
+  const shopId = window.__ownerShopId;
+  if (!shopId) return;
+  const sel = $("ownerAgendaBarberSelect");
+  const barberId = sel && sel.value ? String(sel.value) : "";
+  const lastClosedMillis = getOwnerInboxLastClosedMillis(shopId, barberId);
+  const res = await NaReguaApi.ownerInbox(shopId, barberId, 80);
+  const items = (res && res.items) || [];
+  const list = $("ownerInboxList");
+  if (!list) return;
+  list.innerHTML = "";
+  let unread = 0;
+  items.forEach(function (m) {
+    const it = renderOwnerInboxItem(m, lastClosedMillis);
+    list.appendChild(it.el);
+    if (it.unread) unread += 1;
+  });
+  if (!ownerInboxOverlayOpen) {
+    ownerInboxUnread = unread;
+    setOwnerInboxBadge(unread);
+    if (unread > 0 && isInboxSoundEnabled()) playInboxBeep();
+  }
+}
+
+function stopOwnerInboxPoll() {
+  if (ownerInboxPollTimer) clearInterval(ownerInboxPollTimer);
+  ownerInboxPollTimer = null;
+}
+
+function startOwnerInboxPoll() {
+  stopOwnerInboxPoll();
+  ownerInboxPollTimer = setInterval(function () {
+    loadOwnerInboxOnce().catch(function () {});
+  }, 2500);
+  loadOwnerInboxOnce().catch(function () {});
+}
+
 function switchOwnerTab(name) {
   const portal = $("ownerPortal");
   if (!portal) return;
@@ -164,6 +324,15 @@ function switchOwnerTab(name) {
   tabs.forEach(function (b) {
     b.classList.toggle("is-active", b.getAttribute("data-owner-tab") === name);
   });
+
+  // Inbox FAB only on agenda
+  if (name === "agenda") {
+    showOwnerInboxFab(true);
+    startOwnerInboxPoll();
+  } else {
+    showOwnerInboxFab(false);
+    stopOwnerInboxPoll();
+  }
 }
 
 function shopPublicUrlFromShopData(shop) {
@@ -1433,6 +1602,31 @@ async function init() {
           if (ta && s && s.address != null) ta.value = String(s.address || "");
         }
       });
+    });
+  }
+
+  // Owner Inbox UI
+  const inboxFab = $("ownerInboxFab");
+  if (inboxFab) {
+    inboxFab.addEventListener("click", function () {
+      openOwnerInboxOverlay(true);
+      loadOwnerInboxOnce().catch(function () {});
+    });
+  }
+  const inboxClose = $("ownerInboxCloseBtn");
+  if (inboxClose) inboxClose.addEventListener("click", function () {
+    openOwnerInboxOverlay(false);
+  });
+  const inboxSoundBtn = $("ownerInboxSoundBtn");
+  if (inboxSoundBtn) {
+    const syncLabel = function () {
+      inboxSoundBtn.textContent = isInboxSoundEnabled() ? "Desativar som" : "Ativar som";
+    };
+    syncLabel();
+    inboxSoundBtn.addEventListener("click", function () {
+      setInboxSoundEnabled(!isInboxSoundEnabled());
+      syncLabel();
+      if (isInboxSoundEnabled()) playInboxBeep();
     });
   }
 

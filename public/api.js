@@ -330,6 +330,20 @@
         { method: "PATCH", headers: { Authorization: bearer } }
       );
     },
+
+    ownerInbox: async function (shopId, barberId, limit) {
+      const bearer = await ownerBearer();
+      const qs = [];
+      if (barberId) qs.push("barberId=" + encodeURIComponent(barberId));
+      if (limit != null) qs.push("limit=" + encodeURIComponent(limit));
+      return fetchJson(
+        "/owner/shops/" +
+          encodeURIComponent(shopId) +
+          "/inbox" +
+          (qs.length ? "?" + qs.join("&") : ""),
+        { headers: { Authorization: bearer } }
+      );
+    },
   };
 })();
 
