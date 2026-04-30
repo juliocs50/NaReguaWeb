@@ -153,6 +153,51 @@ function normalizeWeekdayLabel(n) {
   return ["", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"][n] || "";
 }
 
+function switchOwnerTab(name) {
+  const portal = $("ownerPortal");
+  if (!portal) return;
+  const panels = portal.querySelectorAll("[data-panel]");
+  panels.forEach(function (p) {
+    p.hidden = p.getAttribute("data-panel") !== name;
+  });
+  const tabs = portal.querySelectorAll(".owner-tab");
+  tabs.forEach(function (b) {
+    b.classList.toggle("is-active", b.getAttribute("data-owner-tab") === name);
+  });
+}
+
+function shopPublicUrlFromShopData(shop) {
+  const base = String(window.location.origin || "").replace(/\/$/, "");
+  const seg = (shop && (shop.slug || shop.name)) ? String(shop.slug || shop.name) : "";
+  const path = seg
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return path ? base + "/" + encodeURIComponent(path) : base + "/";
+}
+
+async function ownerCopyLinkClick() {
+  const shop = window.__ownerShopFull;
+  const url = shopPublicUrlFromShopData(shop || { name: window.__ownerShopName || "" });
+  try {
+    await navigator.clipboard.writeText(url);
+    setHomeStatus("Link copiado.");
+  } catch (_e) {
+    setHomeStatus("Não foi possível copiar. Link: " + url, true);
+  }
+}
+
+async function ownerWhatsAppClick() {
+  const shop = window.__ownerShopFull;
+  const url = shopPublicUrlFromShopData(shop || { name: window.__ownerShopName || "" });
+  const nome = (shop && shop.name) || window.__ownerShopName || "a nossa barbearia";
+  const text =
+    "Olá! Agende em " + nome + " pelo Barb x Go — é só abrir o link e escolher horário:\n" + url;
+  const wa = "https://wa.me/?text=" + encodeURIComponent(text);
+  window.open(wa, "_blank", "noopener");
+}
+
 async function ownerLoginSubmit() {
   const email = ($("ownerEmail") && $("ownerEmail").value) || "";
   const password = ($("ownerPassword") && $("ownerPassword").value) || "";
@@ -176,6 +221,7 @@ async function ownerLoginSubmit() {
       const full = await NaReguaApi.publicShopById(shop.id);
       if (full && full.shop) {
         const s = full.shop;
+        window.__ownerShopFull = s;
         const badge = $("shopBadge");
         if (badge) {
           const av = badge.querySelector(".shop-badge-avatar");
@@ -205,18 +251,121 @@ function openOwnerBarberEdit(barber) {
   const daysHost = $("ownerBarberEditDays");
   if (nameEl) nameEl.value = barber.name || "";
   if (daysHost) {
-    const days = barber.scheduleByDay || {};
-    const working = Object.keys(days)
-      .map((k) => parseInt(k, 10))
-      .filter(
-        (d) => d >= 1 && d <= 7 && days[String(d)] && days[String(d)].isWorking
-      )
-      .sort((a, b) => a - b)
-      .map(normalizeWeekdayLabel)
-      .join(", ");
-    daysHost.innerHTML =
-      '<p class="muted">Editor completo de horários (web) entra na próxima etapa. Hoje você pode editar o nome aqui.</p>' +
-      (working ? '<p class="muted">Dias: ' + working + "</p>" : "");
+    const schedule = barber.scheduleByDay || {};
+    daysHost.innerHTML = "";
+
+    function mkTimeInput(id, value) {
+      const inp = document.createElement("input");
+      inp.type = "time";
+      inp.value = value || "";
+      inp.id = id;
+      return inp;
+    }
+
+    function mkNumberInput(id, value) {
+      const inp = document.createElement("input");
+      inp.type = "number";
+      inp.min = "5";
+      inp.step = "5";
+      inp.value = String(value != null ? value : 30);
+      inp.id = id;
+      return inp;
+    }
+
+    let prevDayState = null;
+    for (let day = 1; day <= 7; day++) {
+      const ds = schedule[String(day)] || {
+        isWorking: day <= 5,
+        startTime: "09:00",
+        endTime: "18:00",
+        intervalMinutes: 30,
+        lunchStart: day <= 5 ? "12:00" : null,
+        lunchEnd: day <= 5 ? "13:00" : null,
+      };
+
+      const wrap = document.createElement("div");
+      wrap.className = "owner-day-edit-card";
+
+      const top = document.createElement("div");
+      top.className = "owner-day-edit-top";
+
+      const label = document.createElement("strong");
+      label.textContent = normalizeWeekdayLabel(day);
+
+      const right = document.createElement("div");
+      right.style.display = "flex";
+      right.style.gap = "8px";
+      right.style.flexWrap = "wrap";
+
+      const chkLabel = document.createElement("label");
+      chkLabel.className = "field";
+      chkLabel.style.flexDirection = "row";
+      chkLabel.style.alignItems = "center";
+      chkLabel.style.gap = "8px";
+      const chk = document.createElement("input");
+      chk.type = "checkbox";
+      chk.checked = !!ds.isWorking;
+      chk.dataset.day = String(day);
+      chkLabel.appendChild(chk);
+      const chkTxt = document.createElement("span");
+      chkTxt.className = "muted";
+      chkTxt.textContent = "Trabalha";
+      chkLabel.appendChild(chkTxt);
+      right.appendChild(chkLabel);
+
+      const copyBtn = document.createElement("button");
+      copyBtn.type = "button";
+      copyBtn.className = "btn btn-outline btn-sm";
+      copyBtn.textContent = day === 1 ? "Copiar" : "Copiar " + normalizeWeekdayLabel(day - 1);
+      copyBtn.disabled = day === 1;
+      copyBtn.addEventListener("click", function () {
+        if (!prevDayState) return;
+        chk.checked = !!prevDayState.isWorking;
+        start.value = prevDayState.startTime || "";
+        end.value = prevDayState.endTime || "";
+        interval.value = String(prevDayState.intervalMinutes != null ? prevDayState.intervalMinutes : 30);
+        lunchS.value = prevDayState.lunchStart || "";
+        lunchE.value = prevDayState.lunchEnd || "";
+      });
+      right.appendChild(copyBtn);
+
+      top.appendChild(label);
+      top.appendChild(right);
+
+      const grid = document.createElement("div");
+      grid.style.display = "grid";
+      grid.style.gridTemplateColumns = "repeat(2, minmax(0, 1fr))";
+      grid.style.gap = "10px";
+
+      const start = mkTimeInput("day_" + day + "_start", ds.startTime);
+      const end = mkTimeInput("day_" + day + "_end", ds.endTime);
+      const interval = mkNumberInput("day_" + day + "_interval", ds.intervalMinutes);
+      const lunchS = mkTimeInput("day_" + day + "_lunchS", ds.lunchStart || "");
+      const lunchE = mkTimeInput("day_" + day + "_lunchE", ds.lunchEnd || "");
+
+      const mkField = (title, el) => {
+        const f = document.createElement("label");
+        f.className = "field";
+        const sp = document.createElement("span");
+        sp.className = "field-label";
+        sp.textContent = title;
+        f.appendChild(sp);
+        f.appendChild(el);
+        return f;
+      };
+
+      grid.appendChild(mkField("Início", start));
+      grid.appendChild(mkField("Fim", end));
+      grid.appendChild(mkField("Intervalo (min)", interval));
+      grid.appendChild(mkField("Almoço início", lunchS));
+      grid.appendChild(mkField("Almoço fim", lunchE));
+
+      wrap.appendChild(top);
+      wrap.appendChild(grid);
+      daysHost.appendChild(wrap);
+
+      prevDayState = ds;
+    }
   }
   if (ov) ov.hidden = false;
 }
@@ -232,7 +381,30 @@ async function saveOwnerBarberEdit() {
   }
   setHomeStatus("A salvar…");
   try {
-    await NaReguaApi.ownerPatchBarber(shopId, b.id, { name: name.trim() });
+    const daysHost = $("ownerBarberEditDays");
+    const scheduleByDay = {};
+    if (daysHost) {
+      for (let day = 1; day <= 7; day++) {
+        const chk = daysHost.querySelector('input[type="checkbox"][data-day="' + day + '"]');
+        const start = daysHost.querySelector("#day_" + day + "_start");
+        const end = daysHost.querySelector("#day_" + day + "_end");
+        const interval = daysHost.querySelector("#day_" + day + "_interval");
+        const lunchS = daysHost.querySelector("#day_" + day + "_lunchS");
+        const lunchE = daysHost.querySelector("#day_" + day + "_lunchE");
+        scheduleByDay[String(day)] = {
+          isWorking: !!(chk && chk.checked),
+          startTime: start && start.value ? start.value : "09:00",
+          endTime: end && end.value ? end.value : "18:00",
+          intervalMinutes: interval && interval.value ? Number(interval.value) : 30,
+          lunchStart: lunchS && lunchS.value ? lunchS.value : null,
+          lunchEnd: lunchE && lunchE.value ? lunchE.value : null,
+        };
+      }
+    }
+    await NaReguaApi.ownerPatchBarber(shopId, b.id, {
+      name: name.trim(),
+      scheduleByDay: scheduleByDay,
+    });
     const ov = $("ownerBarberEditOverlay");
     if (ov) ov.hidden = true;
     window.__ownerEditingBarber = null;
@@ -240,6 +412,211 @@ async function saveOwnerBarberEdit() {
     await loadOwnerBarbersPanel();
   } catch (e) {
     setHomeStatus(e.message || "Erro ao salvar.", true);
+  }
+}
+
+async function loadOwnerAgendaPanel() {
+  const shopId = window.__ownerShopId;
+  if (!shopId) return;
+  const barbersRes = await NaReguaApi.publicBarbers(shopId);
+  const barbers = (barbersRes && barbersRes.items) || [];
+  const sel = $("ownerAgendaBarberSelect");
+  if (sel) {
+    renderOptions(sel, barbers, (b) => b.id, (b) => b.name || "Barbeiro");
+  }
+  const dateEl = $("ownerAgendaDate");
+  if (dateEl && !dateEl.value) dateEl.value = toDateKey(new Date());
+  await refreshOwnerAgenda();
+}
+
+function renderOwnerAgendaBoard(barber, dateKey, appts) {
+  const host = $("ownerAgendaBoard");
+  if (!host) return;
+  host.innerHTML = "";
+  if (!barber) {
+    host.innerHTML = '<p class="muted">Selecione um barbeiro.</p>';
+    return;
+  }
+  const list = (appts || []).filter((a) => a.barberId === barber.id && a.status !== "CANCELLED");
+  const rows = window.NaReguaSchedule.buildDayAgendaList(barber.scheduleByDay || {}, dateKey, list, new Date());
+  if (!rows.length) {
+    host.innerHTML = '<p class="muted">Sem expediente neste dia.</p>';
+    return;
+  }
+  const wrap = document.createElement("div");
+  wrap.className = "day-agenda-host";
+  rows.forEach(function (r) {
+    const row = document.createElement("div");
+    row.className = "day-agenda-row day-agenda-row--" + (r.state || "free");
+    const left = document.createElement("div");
+    left.className = "day-agenda-time";
+    left.textContent = r.timeLabel || "";
+    const mid = document.createElement("div");
+    mid.className = "day-agenda-main";
+    if (r.state === "lunch") {
+      const t = document.createElement("strong");
+      t.textContent = "ALMOÇO";
+      const s = document.createElement("div");
+      s.className = "muted";
+      s.textContent = r.lunchSubtitle || "";
+      mid.appendChild(t);
+      mid.appendChild(s);
+    } else if (r.state === "free") {
+      mid.innerHTML = '<span class="muted">Livre</span>';
+    } else if (r.state === "past") {
+      mid.innerHTML = '<span class="muted">Horário encerrado</span>';
+    } else {
+      const nm = document.createElement("strong");
+      nm.textContent = safeText(r.clientName || "—");
+      const svc = document.createElement("div");
+      svc.className = "muted";
+      svc.textContent = safeText(r.serviceName || "");
+      mid.appendChild(nm);
+      if (svc.textContent) mid.appendChild(svc);
+    }
+    row.appendChild(left);
+    row.appendChild(mid);
+    wrap.appendChild(row);
+  });
+  host.appendChild(wrap);
+}
+
+async function refreshOwnerAgenda() {
+  const shopId = window.__ownerShopId;
+  const sel = $("ownerAgendaBarberSelect");
+  const dateEl = $("ownerAgendaDate");
+  if (!shopId || !sel || !dateEl) return;
+  const barberId = sel.value || "";
+  const dateKey = dateEl.value || toDateKey(new Date());
+  const barbersRes = await NaReguaApi.publicBarbers(shopId);
+  const barbers = (barbersRes && barbersRes.items) || [];
+  const barber = barbers.find((b) => b.id === barberId) || barbers[0] || null;
+  if (barber && barber.id !== barberId) {
+    sel.value = barber.id;
+  }
+  const apptsRes = await NaReguaApi.ownerAppointments(shopId, dateKey);
+  const appts = (apptsRes && apptsRes.items) || [];
+  renderOwnerAgendaBoard(barber, dateKey, appts);
+}
+
+async function loadOwnerServicesPanel() {
+  const shopId = window.__ownerShopId;
+  if (!shopId) return;
+  const listEl = $("ownerServicesList");
+  if (listEl) listEl.innerHTML = '<p class="muted">A carregar…</p>';
+  const res = await NaReguaApi.ownerServices(shopId);
+  const items = (res && res.items) || [];
+  if (!listEl) return;
+  if (!items.length) {
+    listEl.innerHTML = '<p class="muted">Sem serviços cadastrados.</p>';
+    return;
+  }
+  listEl.innerHTML = "";
+  items.forEach(function (s) {
+    const row = document.createElement("div");
+    row.className = "owner-list-item";
+    row.innerHTML =
+      "<strong>" +
+      safeText(s.name) +
+      "</strong><span class=\"muted\">" +
+      (Number(s.priceCents || 0) / 100).toFixed(2) +
+      " · " +
+      Number(s.durationMinutes || 30) +
+      " min</span>";
+    listEl.appendChild(row);
+  });
+}
+
+async function ownerAddServiceSubmit(ev) {
+  ev.preventDefault();
+  const shopId = window.__ownerShopId;
+  if (!shopId) return;
+  const name = ($("ownerSvcName") && $("ownerSvcName").value) || "";
+  const price = ($("ownerSvcPrice") && $("ownerSvcPrice").value) || "";
+  const duration = ($("ownerSvcDuration") && $("ownerSvcDuration").value) || "30";
+  if (!name.trim()) return;
+  const cents = Math.round(Number(price) * 100);
+  if (!Number.isFinite(cents)) {
+    setHomeStatus("Preço inválido.", true);
+    return;
+  }
+  setHomeStatus("A adicionar…");
+  try {
+    await NaReguaApi.ownerAddService(shopId, {
+      name: name.trim(),
+      priceCents: cents,
+      durationMinutes: Math.max(5, Number(duration) || 30),
+    });
+    if ($("ownerSvcName")) $("ownerSvcName").value = "";
+    if ($("ownerSvcPrice")) $("ownerSvcPrice").value = "";
+    setHomeStatus("Serviço adicionado.");
+    await loadOwnerServicesPanel();
+  } catch (e) {
+    setHomeStatus(e.message || "Erro ao adicionar serviço.", true);
+  }
+}
+
+function formatBRL(cents) {
+  return (Number(cents || 0) / 100).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
+
+async function loadOwnerFinancePanel() {
+  const shopId = window.__ownerShopId;
+  const monthEl = $("ownerFinanceMonth");
+  if (!shopId || !monthEl) return;
+  const m = monthEl.value;
+  if (!m) return;
+  const res = await NaReguaApi.ownerFinance(shopId, m);
+  $("ownerFinanceServiceTotal").textContent = formatBRL(res.serviceSumCents);
+  $("ownerFinanceAppFeeTotal").textContent = formatBRL(res.appFeeSumCents);
+  $("ownerFinanceChargedTotal").textContent = formatBRL(res.serviceSumCents + res.appFeeSumCents);
+  $("ownerFinanceBarberBonusTotal").textContent = formatBRL(Math.floor(res.appFeeSumCents / 2));
+  $("ownerFinanceAppProfitTotal").textContent = formatBRL(res.appFeeSumCents - Math.floor(res.appFeeSumCents / 2));
+  $("ownerFinanceAppTotal").textContent = formatBRL(res.appFeeSumCents);
+
+  const tbl = $("ownerFinanceTable");
+  if (tbl) {
+    const rows = (res.barbers || [])
+      .map(function (b) {
+        return (
+          "<tr><td>" +
+          safeText(b.name) +
+          "</td><td class=\"num\">" +
+          Number(b.doneCount || 0) +
+          "</td><td class=\"num\">" +
+          formatBRL(b.totalAppFeeCents) +
+          "</td><td class=\"num\">" +
+          formatBRL(b.serviceCents) +
+          "</td></tr>"
+        );
+      })
+      .join("");
+    tbl.innerHTML =
+      '<table class="owner-admin-shops-table"><thead><tr><th>Barbeiro</th><th>Feitos</th><th>Taxa app</th><th>Serviços</th></tr></thead><tbody>' +
+      rows +
+      "</tbody></table>";
+  }
+  const blurb = $("ownerFinanceBlurb");
+  if (blurb) blurb.textContent = "";
+}
+
+async function ownerSaveLocationClick() {
+  const shopId = window.__ownerShopId;
+  const ta = $("ownerAddressInput");
+  if (!shopId || !ta) return;
+  const address = String(ta.value || "").trim();
+  setHomeStatus("A guardar…");
+  try {
+    await NaReguaApi.ownerPatchShop(shopId, { address: address });
+    setHomeStatus("Localização guardada.");
+    // refresh header shop cache
+    const full = await NaReguaApi.publicShopById(shopId);
+    if (full && full.shop) window.__ownerShopFull = full.shop;
+  } catch (e) {
+    setHomeStatus(e.message || "Erro ao guardar.", true);
   }
 }
 
@@ -792,9 +1169,23 @@ async function init() {
   }
   const ownerLogoutBtn = $("ownerLogoutBtn");
   if (ownerLogoutBtn) ownerLogoutBtn.addEventListener("click", ownerLogoutClick);
+  const ownerShareLinkBtn = $("ownerShareLinkBtn");
+  if (ownerShareLinkBtn) ownerShareLinkBtn.addEventListener("click", function () {
+    ownerCopyLinkClick().catch(function () {});
+  });
+  const ownerShareWhatsAppBtn = $("ownerShareWhatsAppBtn");
+  if (ownerShareWhatsAppBtn) ownerShareWhatsAppBtn.addEventListener("click", function () {
+    ownerWhatsAppClick().catch(function () {});
+  });
 
   const addBarberForm = $("ownerAddBarberForm");
   if (addBarberForm) addBarberForm.addEventListener("submit", ownerAddBarberSubmit);
+  const addServiceForm = $("ownerAddServiceForm");
+  if (addServiceForm) addServiceForm.addEventListener("submit", ownerAddServiceSubmit);
+  const saveLocBtn = $("ownerSaveLocationBtn");
+  if (saveLocBtn) saveLocBtn.addEventListener("click", function () {
+    ownerSaveLocationClick().catch(function () {});
+  });
 
   const barberEditSave = $("ownerBarberEditSave");
   if (barberEditSave) {
@@ -804,6 +1195,36 @@ async function init() {
   }
   const barberEditCancel = $("ownerBarberEditCancel");
   if (barberEditCancel) barberEditCancel.addEventListener("click", closeOwnerBarberEdit);
+
+  // Owner tabs
+  const portal = $("ownerPortal");
+  if (portal) {
+    portal.querySelectorAll(".owner-tab").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        const tab = btn.getAttribute("data-owner-tab") || "barbers";
+        switchOwnerTab(tab);
+        if (tab === "barbers") loadOwnerBarbersPanel().catch(function () {});
+        if (tab === "agenda") loadOwnerAgendaPanel().catch(function () {});
+        if (tab === "menu") loadOwnerServicesPanel().catch(function () {});
+        if (tab === "finance") {
+          const monthEl = $("ownerFinanceMonth");
+          if (monthEl && !monthEl.value) {
+            const now = new Date();
+            monthEl.value =
+              now.getFullYear() +
+              "-" +
+              String(now.getMonth() + 1).padStart(2, "0");
+          }
+          loadOwnerFinancePanel().catch(function () {});
+        }
+        if (tab === "location") {
+          const ta = $("ownerAddressInput");
+          const s = window.__ownerShopFull;
+          if (ta && s && s.address != null) ta.value = String(s.address || "");
+        }
+      });
+    });
+  }
 
   // Find shop
   const btnFind = $("btnFindShop");
@@ -867,6 +1288,7 @@ async function init() {
           const full = await NaReguaApi.publicShopById(shop.id);
           if (full && full.shop) {
             const s = full.shop;
+            window.__ownerShopFull = s;
             const badge = $("shopBadge");
             if (badge) {
               const av = badge.querySelector(".shop-badge-avatar");
@@ -874,6 +1296,7 @@ async function init() {
             }
           }
         } catch (_e) {}
+        switchOwnerTab("barbers");
         await loadOwnerBarbersPanel();
       }
     } catch (_e) {

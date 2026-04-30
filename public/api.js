@@ -197,6 +197,53 @@
         }
       );
     },
+
+    ownerPatchShop: async function (shopId, body) {
+      const bearer = await ownerBearer();
+      return fetchJson("/owner/shops/" + encodeURIComponent(shopId), {
+        method: "PATCH",
+        headers: { Authorization: bearer },
+        body: body || {},
+      });
+    },
+
+    ownerAppointments: async function (shopId, dateKey) {
+      const bearer = await ownerBearer();
+      return fetchJson(
+        "/owner/shops/" +
+          encodeURIComponent(shopId) +
+          "/appointments?dateKey=" +
+          encodeURIComponent(dateKey),
+        { headers: { Authorization: bearer } }
+      );
+    },
+
+    ownerServices: async function (shopId) {
+      // public is enough; but keep owner token for future changes if needed
+      return fetchJson(
+        "/public/shops/" + encodeURIComponent(shopId) + "/services"
+      );
+    },
+
+    ownerAddService: async function (shopId, body) {
+      const bearer = await ownerBearer();
+      return fetchJson("/owner/shops/" + encodeURIComponent(shopId) + "/services", {
+        method: "POST",
+        headers: { Authorization: bearer },
+        body: body || {},
+      });
+    },
+
+    ownerFinance: async function (shopId, month) {
+      const bearer = await ownerBearer();
+      return fetchJson(
+        "/owner/shops/" +
+          encodeURIComponent(shopId) +
+          "/finance?month=" +
+          encodeURIComponent(month),
+        { headers: { Authorization: bearer } }
+      );
+    },
   };
 })();
 
