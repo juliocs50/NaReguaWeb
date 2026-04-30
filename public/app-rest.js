@@ -701,8 +701,15 @@ function renderOwnerAgendaBoard(barber, dateKey, appts) {
       const apt = byTime[String(r.timeLabel || "").trim()] || null;
       const st = String((apt && apt.status) || "").toUpperCase();
       const appointmentId = (apt && apt.id) || (r.appointmentId || "");
+      const phoneRaw = apt && apt.clientPhone ? String(apt.clientPhone) : "";
+      const phoneDigits = phoneRaw.replace(/[^\d+]/g, "");
 
       if (st === "SCHEDULED") {
+        if (phoneDigits) {
+          addAction("Ligar", "btn-outline", function () {
+            window.location.href = "tel:" + phoneDigits;
+          });
+        }
         addAction("Iniciar", "btn-filled", function () {
           setHomeStatus("A iniciar…");
           NaReguaApi.ownerStart(window.__ownerShopId, appointmentId)
@@ -726,6 +733,11 @@ function renderOwnerAgendaBoard(barber, dateKey, appts) {
             });
         });
       } else if (st === "IN_PROGRESS") {
+        if (phoneDigits) {
+          addAction("Ligar", "btn-outline", function () {
+            window.location.href = "tel:" + phoneDigits;
+          });
+        }
         addAction("Finalizar", "btn-filled", function () {
           setHomeStatus("A finalizar…");
           NaReguaApi.ownerFinish(window.__ownerShopId, appointmentId)
