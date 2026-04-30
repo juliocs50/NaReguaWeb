@@ -23,7 +23,10 @@
           <span class="brand-sub">agendamento</span>
         </a>
         <div class="top-bar-right">
-          <span id="shopBadge" class="shop-badge" hidden></span>
+          <span id="shopBadge" class="shop-badge" hidden>
+            <span class="shop-badge-avatar avatar-circle avatar-circle--sm" aria-hidden="true"></span>
+            <span id="shopBadgeText"></span>
+          </span>
           <a href="/about/" id="btnAbout" class="btn btn-landing-header-link">Saiba mais</a>
           <button type="button" id="btnLoginShop" class="btn btn-landing-header-login">
             <span class="btn-login-long">Entrar como barbearia</span>
@@ -386,7 +389,10 @@
       <!-- Agendamento cliente (link /slug) -->
       <section id="app" class="booking" hidden>
         <div class="card booking-head">
-          <h2 class="section-title" id="bookingTitle">Agendar pelo Barb x Go</h2>
+          <div class="booking-head-row">
+            <span id="bookingShopAvatar" class="avatar-circle avatar-circle--md" aria-hidden="true"></span>
+            <h2 class="section-title" id="bookingTitle">Agendar pelo Barb x Go</h2>
+          </div>
           <p class="muted" id="bookingSubtitle">
             Agende pelo Barb x Go — escolha data, barbeiro, serviço e confirme o horário.
           </p>
@@ -405,6 +411,16 @@
             <span class="field-label">Serviço</span>
             <select id="serviceSelect"></select>
           </label>
+        </div>
+
+        <div class="card booking-selected-barber" id="selectedBarberCard" hidden>
+          <div class="booking-selected-barber-row">
+            <span id="bookingBarberAvatar" class="avatar-circle avatar-circle--md" aria-hidden="true"></span>
+            <div class="booking-selected-barber-main">
+              <strong id="bookingBarberName">Barbeiro</strong>
+              <span class="muted" id="bookingBarberDays"></span>
+            </div>
+          </div>
         </div>
 
         <div class="card">

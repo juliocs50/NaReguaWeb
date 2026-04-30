@@ -76,7 +76,10 @@ function showLandingHome() {
   const badge = $("shopBadge");
   if (badge) {
     badge.hidden = true;
-    badge.textContent = "";
+    const t = $("shopBadgeText");
+    if (t) t.textContent = "";
+    const av = badge.querySelector(".shop-badge-avatar");
+    if (av) av.innerHTML = "";
   }
 }
 
@@ -92,7 +95,8 @@ function showBookingApp(shopName) {
   const badge = $("shopBadge");
   if (badge) {
     badge.hidden = false;
-    badge.textContent = shopName || "";
+    const t = $("shopBadgeText");
+    if (t) t.textContent = shopName || "";
   }
 }
 
@@ -110,8 +114,25 @@ function showOwnerPortal(shopName) {
   const badge = $("shopBadge");
   if (badge) {
     badge.hidden = false;
-    badge.textContent = shopName || "";
+    const t = $("shopBadgeText");
+    if (t) t.textContent = shopName || "";
   }
+}
+
+function setAvatarCircle(el, dataUrl, fallbackText) {
+  if (!el) return;
+  el.innerHTML = "";
+  const raw = (dataUrl || "").trim();
+  if (raw && raw.startsWith("data:image/")) {
+    const img = document.createElement("img");
+    img.alt = "";
+    img.src = raw;
+    el.appendChild(img);
+    return;
+  }
+  const span = document.createElement("span");
+  span.textContent = (fallbackText || "?").trim().slice(0, 1).toUpperCase();
+  el.appendChild(span);
 }
 
 function renderOptions(selectEl, items, getValue, getLabel) {
@@ -150,6 +171,18 @@ async function ownerLoginSubmit() {
     window.__ownerShopName = shop.name || "";
     setHomeStatus("");
     showOwnerPortal(window.__ownerShopName);
+    // load full shop (avatar) for header
+    try {
+      const full = await NaReguaApi.publicShopById(shop.id);
+      if (full && full.shop) {
+        const s = full.shop;
+        const badge = $("shopBadge");
+        if (badge) {
+          const av = badge.querySelector(".shop-badge-avatar");
+          setAvatarCircle(av, s.avatarDataUrl, s.name || "?");
+        }
+      }
+    } catch (_e) {}
     await loadOwnerBarbersPanel();
   } catch (e) {
     setHomeStatus(e.message || "Falha ao entrar.", true);
@@ -231,20 +264,64 @@ async function loadOwnerBarbersPanel() {
     }
     listEl.innerHTML = "";
     items.forEach(function (b) {
-      const row = document.createElement("button");
-      row.type = "button";
-      row.className = "find-shop-result-btn";
-      const strong = document.createElement("strong");
-      strong.textContent = b.name || "Barbeiro";
-      row.appendChild(strong);
-      const hint = document.createElement("span");
-      hint.className = "find-shop-result-dist";
-      hint.textContent = "Editar";
-      row.appendChild(hint);
-      row.addEventListener("click", function () {
+      const card = document.createElement("div");
+      card.className = "owner-barber-card";
+
+      const avatarCol = document.createElement("div");
+      avatarCol.style.display = "flex";
+      avatarCol.style.flexDirection = "column";
+      avatarCol.style.alignItems = "center";
+      avatarCol.style.gap = "6px";
+      avatarCol.style.width = "88px";
+
+      const av = document.createElement("span");
+      av.className = "avatar-circle avatar-circle--md";
+      setAvatarCircle(av, b.avatarDataUrl, b.name || "?");
+      avatarCol.appendChild(av);
+
+      const nm = document.createElement("div");
+      nm.style.fontWeight = "600";
+      nm.style.fontSize = "0.92rem";
+      nm.style.textAlign = "center";
+      nm.style.maxWidth = "88px";
+      nm.style.overflow = "hidden";
+      nm.style.textOverflow = "ellipsis";
+      nm.style.whiteSpace = "nowrap";
+      nm.textContent = b.name || "Barbeiro";
+      avatarCol.appendChild(nm);
+
+      const main = document.createElement("div");
+      main.className = "owner-barber-card-main";
+
+      const days = b.scheduleByDay || {};
+      const working = Object.keys(days)
+        .map((k) => parseInt(k, 10))
+        .filter(
+          (d) => d >= 1 && d <= 7 && days[String(d)] && days[String(d)].isWorking
+        )
+        .sort((a, b2) => a - b2)
+        .map(normalizeWeekdayLabel)
+        .join(", ");
+
+      const sub = document.createElement("p");
+      sub.className = "owner-barber-card-sub";
+      sub.textContent = working ? "Dias: " + working : "Sem dias de trabalho definidos";
+      main.appendChild(sub);
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn btn-outline btn-sm";
+      btn.textContent = "Editar";
+      btn.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
         openOwnerBarberEdit(b);
       });
-      listEl.appendChild(row);
+
+      card.appendChild(avatarCol);
+      card.appendChild(main);
+      card.appendChild(btn);
+      listEl.appendChild(card);
     });
   } catch (e) {
     if (listEl)
@@ -423,6 +500,14 @@ async function loadBookingBySlug(slug) {
     applyBookingHeadlines(shop.name || "");
     showBookingApp(shop.name || "");
 
+    // shop avatar (like APK header)
+    setAvatarCircle($("bookingShopAvatar"), shop.avatarDataUrl, shop.name || "?");
+    const badge = $("shopBadge");
+    if (badge) {
+      const av = badge.querySelector(".shop-badge-avatar");
+      setAvatarCircle(av, shop.avatarDataUrl, shop.name || "?");
+    }
+
     // date default
     const dateEl = $("dateKey");
     if (dateEl) dateEl.value = toDateKey(new Date());
@@ -455,6 +540,11 @@ async function loadBookingBySlug(slug) {
         (b) => b.id,
         (b) => b.name || "Barbeiro"
       );
+      barberSel.addEventListener("change", function () {
+        try {
+          renderSelectedBarberCard();
+        } catch (_e) {}
+      });
     }
     if (svcSel) {
       renderOptions(
@@ -466,9 +556,33 @@ async function loadBookingBySlug(slug) {
     }
 
     await refreshAppointmentsAndSlots();
+    renderSelectedBarberCard();
   } catch (e) {
     setStatus(e.message || "Erro ao carregar.", true);
   }
+}
+
+function renderSelectedBarberCard() {
+  const card = $("selectedBarberCard");
+  const sel = $("barberSelect");
+  if (!card || !sel) return;
+  const barberId = sel.value || "";
+  const b = (window.__barbers || []).find((x) => x.id === barberId);
+  if (!b) {
+    card.hidden = true;
+    return;
+  }
+  card.hidden = false;
+  $("bookingBarberName").textContent = b.name || "Barbeiro";
+  setAvatarCircle($("bookingBarberAvatar"), b.avatarDataUrl, b.name || "?");
+  const days = b.scheduleByDay || {};
+  const working = Object.keys(days)
+    .map((k) => parseInt(k, 10))
+    .filter((d) => d >= 1 && d <= 7 && days[String(d)] && days[String(d)].isWorking)
+    .sort((a, b2) => a - b2)
+    .map(normalizeWeekdayLabel)
+    .join(", ");
+  $("bookingBarberDays").textContent = working ? "Dias: " + working : "";
 }
 
 function getSelectedBookingContext() {
@@ -748,6 +862,18 @@ async function init() {
         window.__ownerShopId = shop.id;
         window.__ownerShopName = shop.name || "";
         showOwnerPortal(window.__ownerShopName);
+        // load full shop (avatar) for header
+        try {
+          const full = await NaReguaApi.publicShopById(shop.id);
+          if (full && full.shop) {
+            const s = full.shop;
+            const badge = $("shopBadge");
+            if (badge) {
+              const av = badge.querySelector(".shop-badge-avatar");
+              setAvatarCircle(av, s.avatarDataUrl, s.name || "?");
+            }
+          }
+        } catch (_e) {}
         await loadOwnerBarbersPanel();
       }
     } catch (_e) {

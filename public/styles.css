@@ -511,6 +511,74 @@ body.layout-landing .landing-contact-btn.btn-filled {
   text-overflow: ellipsis;
 }
 
+.shop-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.booking-head-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.booking-selected-barber {
+  padding: 14px 16px;
+}
+
+.booking-selected-barber-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.booking-selected-barber-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.booking-selected-barber-main strong {
+  font-size: 1rem;
+}
+
+/* Avatar circles (shop + barber) */
+.avatar-circle {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--md-sys-color-surface-container-high);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--md-sys-color-on-surface);
+  font-weight: 700;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.avatar-circle--sm {
+  width: 26px;
+  height: 26px;
+  font-size: 0.75rem;
+}
+
+.avatar-circle--md {
+  width: 44px;
+  height: 44px;
+  font-size: 1rem;
+}
+
+.avatar-circle img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .main {
   max-width: 960px;
   margin: 0 auto;
