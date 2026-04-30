@@ -47,6 +47,7 @@
   }
 
   const LS_GUEST = "naregua_web_guest_token";
+  const LS_GUEST_ID = "naregua_web_guest_id";
   const LS_OWNER = "naregua_web_owner_token";
 
   function getGuestToken() {
@@ -61,6 +62,21 @@
     try {
       if (!token) localStorage.removeItem(LS_GUEST);
       else localStorage.setItem(LS_GUEST, token);
+    } catch (_e) {}
+  }
+
+  function getGuestId() {
+    try {
+      return (localStorage.getItem(LS_GUEST_ID) || "").trim();
+    } catch (_e) {
+      return "";
+    }
+  }
+
+  function setGuestId(id) {
+    try {
+      if (!id) localStorage.removeItem(LS_GUEST_ID);
+      else localStorage.setItem(LS_GUEST_ID, id);
     } catch (_e) {}
   }
 
@@ -90,8 +106,10 @@
     if (existing) return existing;
     const res = await fetchJson("/auth/guest", { method: "POST" });
     const tok = (res && res.token) || "";
+    const guestId = (res && (res.guestId || res.userId || res.id)) || "";
     if (!tok) throw new Error("Não foi possível iniciar sessão de cliente.");
     setGuestToken(tok);
+    if (guestId) setGuestId(guestId);
     return tok;
   }
 
@@ -106,6 +124,8 @@
     ensureGuestToken,
     authBearer,
     setGuestToken,
+    getGuestId,
+    setGuestId,
     getOwnerToken,
     setOwnerToken,
     ownerBearer,
@@ -243,6 +263,15 @@
           encodeURIComponent(month),
         { headers: { Authorization: bearer } }
       );
+    },
+
+    ownerManual: async function (shopId, body) {
+      const bearer = await ownerBearer();
+      return fetchJson("/owner/shops/" + encodeURIComponent(shopId) + "/appointments/manual", {
+        method: "POST",
+        headers: { Authorization: bearer },
+        body: body || {},
+      });
     },
   };
 })();

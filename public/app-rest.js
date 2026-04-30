@@ -476,9 +476,89 @@ function renderOwnerAgendaBoard(barber, dateKey, appts) {
     }
     row.appendChild(left);
     row.appendChild(mid);
+
+    // Botão "Marcar" no painel do dono para slots livres (usa modal existente)
+    if (r.state === "free") {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn btn-filled btn-sm";
+      btn.textContent = "Marcar";
+      btn.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        openOwnerBookModal({
+          shopId: window.__ownerShopId,
+          barberId: barber.id,
+          dateKey: dateKey,
+          timeLabel: r.timeLabel,
+        });
+      });
+      row.appendChild(btn);
+    }
     wrap.appendChild(row);
   });
   host.appendChild(wrap);
+}
+
+function closeOwnerBookModal() {
+  const ov = $("ownerModalOverlay");
+  if (ov) ov.hidden = true;
+  window.__ownerBookCtx = null;
+}
+
+async function openOwnerBookModal(ctx) {
+  if (!ctx || !ctx.shopId) return;
+  window.__ownerBookCtx = ctx;
+  const servicesRes = await NaReguaApi.ownerServices(ctx.shopId);
+  window.__ownerServicesCache = (servicesRes && servicesRes.items) || [];
+  const svcSel = $("ownerModalService");
+  if (svcSel) {
+    renderOptions(
+      svcSel,
+      window.__ownerServicesCache,
+      (s) => s.id,
+      (s) => (s.name || "Serviço") + " (" + (Number(s.priceCents || 0) / 100).toFixed(2) + ")"
+    );
+  }
+  const meta = $("ownerModalMeta");
+  if (meta) meta.textContent = ctx.timeLabel + " · " + ctx.dateKey;
+  const nameEl = $("ownerModalClientName");
+  if (nameEl) nameEl.value = "";
+  const ov = $("ownerModalOverlay");
+  if (ov) ov.hidden = false;
+}
+
+async function confirmOwnerBookModal() {
+  const ctx = window.__ownerBookCtx;
+  if (!ctx) return;
+  const name = ($("ownerModalClientName") && $("ownerModalClientName").value) || "";
+  const svcId = ($("ownerModalService") && $("ownerModalService").value) || "";
+  const svc = (window.__ownerServicesCache || []).find((s) => s.id === svcId);
+  if (!name.trim()) {
+    setHomeStatus("Informe o nome do cliente.", true);
+    return;
+  }
+  if (!svc) {
+    setHomeStatus("Selecione um serviço.", true);
+    return;
+  }
+  setHomeStatus("A marcar…");
+  try {
+    await NaReguaApi.ownerManual(ctx.shopId, {
+      barberId: ctx.barberId,
+      dateKey: ctx.dateKey,
+      timeLabel: ctx.timeLabel,
+      clientName: name.trim(),
+      serviceId: svc.id,
+      serviceName: svc.name,
+      servicePriceCents: Number(svc.priceCents || 0) || 0,
+    });
+    closeOwnerBookModal();
+    setHomeStatus("Horário marcado.");
+    await refreshOwnerAgenda();
+  } catch (e) {
+    setHomeStatus(e.message || "Erro ao marcar.", true);
+  }
 }
 
 async function refreshOwnerAgenda() {
@@ -1074,6 +1154,25 @@ function renderClientAvailabilityFromAppts(appts, shopId, dateKey, barberId) {
     return !window.NaReguaSchedule.isSlotLabelPast(dateKey, t, now);
   });
 
+  // Mostrar botão Cancelar só para quem marcou (mesma sessão guest)
+  try {
+    const guestId = NaReguaApi.getGuestId ? NaReguaApi.getGuestId() : "";
+    if (guestId && cancelBtn) {
+      const mine = appts.find(function (a) {
+        return (
+          a.barberId === barberId &&
+          (a.status || "SCHEDULED") === "SCHEDULED" &&
+          (a.createdBy || "CLIENT") === "CLIENT" &&
+          String(a.clientUid || "") === String(guestId)
+        );
+      });
+      if (mine && mine.id) {
+        cancelBtn.hidden = false;
+        cancelBtn.dataset.appointmentId = mine.id;
+      }
+    }
+  } catch (_e) {}
+
   if (!slotsEl) return;
   slotsEl.innerHTML = "";
   window.__selectedTimeLabel = null;
@@ -1196,6 +1295,15 @@ async function init() {
   const barberEditCancel = $("ownerBarberEditCancel");
   if (barberEditCancel) barberEditCancel.addEventListener("click", closeOwnerBarberEdit);
 
+  const ownerModalConfirm = $("ownerModalConfirm");
+  if (ownerModalConfirm) {
+    ownerModalConfirm.addEventListener("click", function () {
+      confirmOwnerBookModal().catch(function () {});
+    });
+  }
+  const ownerModalCancel = $("ownerModalCancel");
+  if (ownerModalCancel) ownerModalCancel.addEventListener("click", closeOwnerBookModal);
+
   // Owner tabs
   const portal = $("ownerPortal");
   if (portal) {
@@ -1270,6 +1378,25 @@ async function init() {
     if (barberSel) barberSel.addEventListener("change", () => refreshAppointmentsAndSlots().catch(() => {}));
     const bookBtn = $("bookBtn");
     if (bookBtn) bookBtn.addEventListener("click", () => bookClick().catch(() => {}));
+
+    const cancelBtn = $("cancelBtn");
+    if (cancelBtn) {
+      cancelBtn.addEventListener("click", function () {
+        const shopId = window.__shopId || "";
+        const id = cancelBtn.dataset.appointmentId || "";
+        if (!shopId || !id) return;
+        setStatus("A cancelar…");
+        NaReguaApi.publicCancel(shopId, id)
+          .then(function () {
+            setStatus("Agendamento cancelado.");
+            return refreshAppointmentsAndSlots();
+          })
+          .catch(function (e) {
+            setStatus(e.message || "Não foi possível cancelar.", true);
+            refreshAppointmentsAndSlots().catch(function () {});
+          });
+      });
+    }
   } else {
     showLandingHome();
   }
