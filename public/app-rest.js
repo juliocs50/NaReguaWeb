@@ -1,11 +1,10 @@
 /* global NaReguaApi */
 
 /**
- * Minimal REST-based client (Render backend) for:
+ * REST-based client (Render backend) for:
  * - Find shop by name / nearby
  * - Public booking page (/slug)
- *
- * Owner portal remains disabled for now; migrate next.
+ * - Owner login (limited: list/add/edit barbers)
  */
 
 const $ = (id) => document.getElementById(id);
@@ -72,6 +71,8 @@ function showLandingHome() {
   if (app) app.hidden = true;
   const home = $("homeLanding");
   if (home) home.hidden = false;
+  const owner = $("ownerPortal");
+  if (owner) owner.hidden = true;
   const badge = $("shopBadge");
   if (badge) {
     badge.hidden = true;
@@ -86,6 +87,26 @@ function showBookingApp(shopName) {
   if (app) app.hidden = false;
   const home = $("homeLanding");
   if (home) home.hidden = true;
+  const owner = $("ownerPortal");
+  if (owner) owner.hidden = true;
+  const badge = $("shopBadge");
+  if (badge) {
+    badge.hidden = false;
+    badge.textContent = shopName || "";
+  }
+}
+
+function showOwnerPortal(shopName) {
+  document.body.classList.remove("layout-landing");
+  document.body.classList.add("layout-app");
+  const app = $("app");
+  if (app) app.hidden = true;
+  const home = $("homeLanding");
+  if (home) home.hidden = true;
+  const owner = $("ownerPortal");
+  if (owner) owner.hidden = false;
+  const title = $("ownerShopTitle");
+  if (title) title.textContent = shopName || "Barbearia";
   const badge = $("shopBadge");
   if (badge) {
     badge.hidden = false;
@@ -105,6 +126,149 @@ function renderOptions(selectEl, items, getValue, getLabel) {
 
 function safeText(v) {
   return v != null ? String(v) : "";
+}
+
+function normalizeWeekdayLabel(n) {
+  return ["", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"][n] || "";
+}
+
+async function ownerLoginSubmit() {
+  const email = ($("ownerEmail") && $("ownerEmail").value) || "";
+  const password = ($("ownerPassword") && $("ownerPassword").value) || "";
+  if (!email.trim() || !password) {
+    setHomeStatus("Preencha e-mail e senha.", true);
+    return;
+  }
+  setHomeStatus("A entrar…");
+  try {
+    const res = await NaReguaApi.authLogin(email, password);
+    NaReguaApi.setOwnerToken(res.token);
+    const me = await NaReguaApi.usersMe();
+    const shop = me.shop;
+    if (!shop || !shop.id) throw new Error("Conta sem barbearia associada.");
+    window.__ownerShopId = shop.id;
+    window.__ownerShopName = shop.name || "";
+    setHomeStatus("");
+    showOwnerPortal(window.__ownerShopName);
+    await loadOwnerBarbersPanel();
+  } catch (e) {
+    setHomeStatus(e.message || "Falha ao entrar.", true);
+  }
+}
+
+function ownerLogoutClick() {
+  NaReguaApi.setOwnerToken("");
+  window.__ownerShopId = null;
+  window.__ownerShopName = null;
+  showLandingHome();
+  setHomeStatus("Sessão encerrada.");
+}
+
+function openOwnerBarberEdit(barber) {
+  if (!barber) return;
+  window.__ownerEditingBarber = barber;
+  const ov = $("ownerBarberEditOverlay");
+  const nameEl = $("ownerBarberEditName");
+  const daysHost = $("ownerBarberEditDays");
+  if (nameEl) nameEl.value = barber.name || "";
+  if (daysHost) {
+    const days = barber.scheduleByDay || {};
+    const working = Object.keys(days)
+      .map((k) => parseInt(k, 10))
+      .filter(
+        (d) => d >= 1 && d <= 7 && days[String(d)] && days[String(d)].isWorking
+      )
+      .sort((a, b) => a - b)
+      .map(normalizeWeekdayLabel)
+      .join(", ");
+    daysHost.innerHTML =
+      '<p class="muted">Editor completo de horários (web) entra na próxima etapa. Hoje você pode editar o nome aqui.</p>' +
+      (working ? '<p class="muted">Dias: ' + working + "</p>" : "");
+  }
+  if (ov) ov.hidden = false;
+}
+
+async function saveOwnerBarberEdit() {
+  const b = window.__ownerEditingBarber;
+  const shopId = window.__ownerShopId;
+  if (!b || !shopId) return;
+  const name = ($("ownerBarberEditName") && $("ownerBarberEditName").value) || "";
+  if (!name.trim()) {
+    setHomeStatus("Informe o nome do barbeiro.", true);
+    return;
+  }
+  setHomeStatus("A salvar…");
+  try {
+    await NaReguaApi.ownerPatchBarber(shopId, b.id, { name: name.trim() });
+    const ov = $("ownerBarberEditOverlay");
+    if (ov) ov.hidden = true;
+    window.__ownerEditingBarber = null;
+    setHomeStatus("Barbeiro atualizado.");
+    await loadOwnerBarbersPanel();
+  } catch (e) {
+    setHomeStatus(e.message || "Erro ao salvar.", true);
+  }
+}
+
+function closeOwnerBarberEdit() {
+  const ov = $("ownerBarberEditOverlay");
+  if (ov) ov.hidden = true;
+  window.__ownerEditingBarber = null;
+}
+
+async function loadOwnerBarbersPanel() {
+  const shopId = window.__ownerShopId;
+  if (!shopId) return;
+  const listEl = $("ownerBarbersList");
+  if (listEl) listEl.innerHTML = '<p class="muted">A carregar…</p>';
+  try {
+    const res = await NaReguaApi.publicBarbers(shopId);
+    const items = (res && res.items) || [];
+    if (!listEl) return;
+    if (!items.length) {
+      listEl.innerHTML = '<p class="muted">Nenhum barbeiro cadastrado.</p>';
+      return;
+    }
+    listEl.innerHTML = "";
+    items.forEach(function (b) {
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = "find-shop-result-btn";
+      const strong = document.createElement("strong");
+      strong.textContent = b.name || "Barbeiro";
+      row.appendChild(strong);
+      const hint = document.createElement("span");
+      hint.className = "find-shop-result-dist";
+      hint.textContent = "Editar";
+      row.appendChild(hint);
+      row.addEventListener("click", function () {
+        openOwnerBarberEdit(b);
+      });
+      listEl.appendChild(row);
+    });
+  } catch (e) {
+    if (listEl)
+      listEl.innerHTML =
+        '<p class="muted err">' + (e.message || "Erro") + "</p>";
+  }
+}
+
+async function ownerAddBarberSubmit(ev) {
+  ev.preventDefault();
+  const shopId = window.__ownerShopId;
+  const input = $("ownerNewBarberName");
+  const name = (input && input.value) || "";
+  if (!shopId) return;
+  if (!name.trim()) return;
+  setHomeStatus("A adicionar…");
+  try {
+    await NaReguaApi.ownerAddBarber(shopId, name.trim());
+    if (input) input.value = "";
+    setHomeStatus("Barbeiro adicionado.");
+    await loadOwnerBarbersPanel();
+  } catch (e) {
+    setHomeStatus(e.message || "Erro ao adicionar.", true);
+  }
 }
 
 // Find shop results UI: reuse existing DOM but with backend data
@@ -490,19 +654,42 @@ async function bookClick() {
 }
 
 async function init() {
-  // Disable owner portal (for now)
+  // Owner login (REST)
   const btnLogin = $("btnLoginShop");
-  if (btnLogin) {
+  const loginCard = $("loginCard");
+  if (btnLogin && loginCard) {
     btnLogin.addEventListener("click", function () {
-      setHomeStatus("Painel da barbearia (web) está em migração. Use o app Android por enquanto.", true);
+      loginCard.hidden = false;
+      setHomeStatus("");
     });
   }
-  const btnRegister = $("btnHeroRegisterShop");
-  if (btnRegister) {
-    btnRegister.addEventListener("click", function () {
-      setHomeStatus("Cadastro via web está em migração. Use o app Android por enquanto.", true);
+  const ownerLoginBtn = $("ownerLoginSubmit");
+  if (ownerLoginBtn) {
+    ownerLoginBtn.addEventListener("click", function () {
+      ownerLoginSubmit().catch(function () {});
     });
   }
+  const ownerLoginCancel = $("ownerLoginCancel");
+  if (ownerLoginCancel) {
+    ownerLoginCancel.addEventListener("click", function () {
+      if (loginCard) loginCard.hidden = true;
+      setHomeStatus("");
+    });
+  }
+  const ownerLogoutBtn = $("ownerLogoutBtn");
+  if (ownerLogoutBtn) ownerLogoutBtn.addEventListener("click", ownerLogoutClick);
+
+  const addBarberForm = $("ownerAddBarberForm");
+  if (addBarberForm) addBarberForm.addEventListener("submit", ownerAddBarberSubmit);
+
+  const barberEditSave = $("ownerBarberEditSave");
+  if (barberEditSave) {
+    barberEditSave.addEventListener("click", function () {
+      saveOwnerBarberEdit().catch(function () {});
+    });
+  }
+  const barberEditCancel = $("ownerBarberEditCancel");
+  if (barberEditCancel) barberEditCancel.addEventListener("click", closeOwnerBarberEdit);
 
   // Find shop
   const btnFind = $("btnFindShop");
@@ -550,6 +737,22 @@ async function init() {
     if (bookBtn) bookBtn.addEventListener("click", () => bookClick().catch(() => {}));
   } else {
     showLandingHome();
+  }
+
+  // Auto-restore owner session
+  if (NaReguaApi.getOwnerToken && NaReguaApi.getOwnerToken()) {
+    try {
+      const me = await NaReguaApi.usersMe();
+      const shop = me.shop;
+      if (shop && shop.id) {
+        window.__ownerShopId = shop.id;
+        window.__ownerShopName = shop.name || "";
+        showOwnerPortal(window.__ownerShopName);
+        await loadOwnerBarbersPanel();
+      }
+    } catch (_e) {
+      NaReguaApi.setOwnerToken("");
+    }
   }
 }
 

@@ -47,6 +47,7 @@
   }
 
   const LS_GUEST = "naregua_web_guest_token";
+  const LS_OWNER = "naregua_web_owner_token";
 
   function getGuestToken() {
     try {
@@ -61,6 +62,27 @@
       if (!token) localStorage.removeItem(LS_GUEST);
       else localStorage.setItem(LS_GUEST, token);
     } catch (_e) {}
+  }
+
+  function getOwnerToken() {
+    try {
+      return (localStorage.getItem(LS_OWNER) || "").trim();
+    } catch (_e) {
+      return "";
+    }
+  }
+
+  function setOwnerToken(token) {
+    try {
+      if (!token) localStorage.removeItem(LS_OWNER);
+      else localStorage.setItem(LS_OWNER, token);
+    } catch (_e) {}
+  }
+
+  async function ownerBearer() {
+    const tok = getOwnerToken();
+    if (!tok) throw new Error("Faça login da barbearia.");
+    return "Bearer " + tok;
   }
 
   async function ensureGuestToken() {
@@ -84,6 +106,19 @@
     ensureGuestToken,
     authBearer,
     setGuestToken,
+    getOwnerToken,
+    setOwnerToken,
+    ownerBearer,
+    authLogin: function (email, password) {
+      return fetchJson("/auth/login", {
+        method: "POST",
+        body: { email: String(email || "").trim(), password: String(password || "") },
+      });
+    },
+    usersMe: async function () {
+      const bearer = await ownerBearer();
+      return fetchJson("/users/me", { headers: { Authorization: bearer } });
+    },
     // public endpoints
     publicSearchShops: function (q) {
       return fetchJson("/public/shops/search?q=" + encodeURIComponent(q));
@@ -136,6 +171,30 @@
           encodeURIComponent(appointmentId) +
           "/cancel",
         { method: "POST", headers: { Authorization: bearer } }
+      );
+    },
+
+    // owner endpoints (limited set for now)
+    ownerAddBarber: async function (shopId, name) {
+      const bearer = await ownerBearer();
+      return fetchJson("/owner/shops/" + encodeURIComponent(shopId) + "/barbers", {
+        method: "POST",
+        headers: { Authorization: bearer },
+        body: { name: String(name || "").trim() },
+      });
+    },
+    ownerPatchBarber: async function (shopId, barberId, body) {
+      const bearer = await ownerBearer();
+      return fetchJson(
+        "/owner/shops/" +
+          encodeURIComponent(shopId) +
+          "/barbers/" +
+          encodeURIComponent(barberId),
+        {
+          method: "PATCH",
+          headers: { Authorization: bearer },
+          body: body || {},
+        }
       );
     },
   };
