@@ -273,6 +273,63 @@
         body: body || {},
       });
     },
+
+    ownerReserve: async function (shopId, body) {
+      const bearer = await ownerBearer();
+      return fetchJson("/owner/shops/" + encodeURIComponent(shopId) + "/appointments/reserve", {
+        method: "POST",
+        headers: { Authorization: bearer },
+        body: body || {},
+      });
+    },
+
+    ownerStart: async function (shopId, appointmentId) {
+      const bearer = await ownerBearer();
+      return fetchJson(
+        "/owner/shops/" +
+          encodeURIComponent(shopId) +
+          "/appointments/" +
+          encodeURIComponent(appointmentId) +
+          "/start",
+        { method: "PATCH", headers: { Authorization: bearer } }
+      );
+    },
+
+    ownerFinish: async function (shopId, appointmentId) {
+      const bearer = await ownerBearer();
+      return fetchJson(
+        "/owner/shops/" +
+          encodeURIComponent(shopId) +
+          "/appointments/" +
+          encodeURIComponent(appointmentId) +
+          "/finish",
+        { method: "PATCH", headers: { Authorization: bearer } }
+      );
+    },
+
+    ownerCancel: async function (shopId, appointmentId) {
+      const bearer = await ownerBearer();
+      return fetchJson(
+        "/owner/shops/" +
+          encodeURIComponent(shopId) +
+          "/appointments/" +
+          encodeURIComponent(appointmentId) +
+          "/cancel",
+        { method: "PATCH", headers: { Authorization: bearer } }
+      );
+    },
+
+    ownerRelease: async function (shopId, appointmentId) {
+      const bearer = await ownerBearer();
+      return fetchJson(
+        "/owner/shops/" +
+          encodeURIComponent(shopId) +
+          "/appointments/" +
+          encodeURIComponent(appointmentId) +
+          "/release",
+        { method: "PATCH", headers: { Authorization: bearer } }
+      );
+    },
   };
 })();
 

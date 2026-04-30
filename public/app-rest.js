@@ -445,6 +445,13 @@ function renderOwnerAgendaBoard(barber, dateKey, appts) {
   }
   const wrap = document.createElement("div");
   wrap.className = "day-agenda-host";
+  const byTime = {};
+  (appts || []).forEach(function (a) {
+    if (!a || !a.timeLabel) return;
+    if ((a.status || "SCHEDULED") === "CANCELLED") return;
+    if (String(a.barberId || "") !== String(barber.id || "")) return;
+    byTime[String(a.timeLabel).trim()] = a;
+  });
   rows.forEach(function (r) {
     const row = document.createElement("div");
     row.className = "day-agenda-row day-agenda-row--" + (r.state || "free");
@@ -477,15 +484,28 @@ function renderOwnerAgendaBoard(barber, dateKey, appts) {
     row.appendChild(left);
     row.appendChild(mid);
 
-    // Botão "Marcar" no painel do dono para slots livres (usa modal existente)
-    if (r.state === "free") {
+    // Ações (igual ao APK): marcar, bloquear, iniciar, finalizar, cancelar, liberar
+    const actions = document.createElement("div");
+    actions.style.display = "flex";
+    actions.style.gap = "8px";
+    actions.style.flexWrap = "wrap";
+    actions.style.justifyContent = "flex-end";
+
+    function addAction(label, style, onClick) {
       const btn = document.createElement("button");
       btn.type = "button";
-      btn.className = "btn btn-filled btn-sm";
-      btn.textContent = "Marcar";
+      btn.className = "btn " + (style || "btn-outline") + " btn-sm";
+      btn.textContent = label;
       btn.addEventListener("click", function (ev) {
         ev.preventDefault();
         ev.stopPropagation();
+        onClick();
+      });
+      actions.appendChild(btn);
+    }
+
+    if (r.state === "free") {
+      addAction("Marcar", "btn-filled", function () {
         openOwnerBookModal({
           shopId: window.__ownerShopId,
           barberId: barber.id,
@@ -493,8 +513,90 @@ function renderOwnerAgendaBoard(barber, dateKey, appts) {
           timeLabel: r.timeLabel,
         });
       });
-      row.appendChild(btn);
+      addAction("Bloquear", "btn-outline", function () {
+        setHomeStatus("A bloquear…");
+        NaReguaApi.ownerReserve(window.__ownerShopId, {
+          barberId: barber.id,
+          dateKey: dateKey,
+          timeLabel: r.timeLabel,
+        })
+          .then(function () {
+            setHomeStatus("Horário bloqueado.");
+            return refreshOwnerAgenda();
+          })
+          .catch(function (e) {
+            setHomeStatus(e.message || "Erro ao bloquear.", true);
+          });
+      });
+    } else {
+      const apt = byTime[String(r.timeLabel || "").trim()] || null;
+      const st = String((apt && apt.status) || "").toUpperCase();
+      const appointmentId = (apt && apt.id) || (r.appointmentId || "");
+
+      if (st === "SCHEDULED") {
+        addAction("Iniciar", "btn-filled", function () {
+          setHomeStatus("A iniciar…");
+          NaReguaApi.ownerStart(window.__ownerShopId, appointmentId)
+            .then(function () {
+              setHomeStatus("Atendimento iniciado.");
+              return refreshOwnerAgenda();
+            })
+            .catch(function (e) {
+              setHomeStatus(e.message || "Erro ao iniciar.", true);
+            });
+        });
+        addAction("Cancelar", "btn-outline", function () {
+          setHomeStatus("A cancelar…");
+          NaReguaApi.ownerCancel(window.__ownerShopId, appointmentId)
+            .then(function () {
+              setHomeStatus("Agendamento cancelado.");
+              return refreshOwnerAgenda();
+            })
+            .catch(function (e) {
+              setHomeStatus(e.message || "Erro ao cancelar.", true);
+            });
+        });
+      } else if (st === "IN_PROGRESS") {
+        addAction("Finalizar", "btn-filled", function () {
+          setHomeStatus("A finalizar…");
+          NaReguaApi.ownerFinish(window.__ownerShopId, appointmentId)
+            .then(function () {
+              setHomeStatus("Atendimento finalizado.");
+              return refreshOwnerAgenda();
+            })
+            .catch(function (e) {
+              setHomeStatus(e.message || "Erro ao finalizar.", true);
+            });
+        });
+        addAction("Cancelar", "btn-outline", function () {
+          setHomeStatus("A cancelar…");
+          NaReguaApi.ownerCancel(window.__ownerShopId, appointmentId)
+            .then(function () {
+              setHomeStatus("Agendamento cancelado.");
+              return refreshOwnerAgenda();
+            })
+            .catch(function (e) {
+              setHomeStatus(e.message || "Erro ao cancelar.", true);
+            });
+        });
+      } else if (st === "RESERVED") {
+        addAction("Libertar", "btn-outline", function () {
+          setHomeStatus("A libertar…");
+          NaReguaApi.ownerRelease(window.__ownerShopId, appointmentId)
+            .then(function () {
+              setHomeStatus("Horário liberado.");
+              return refreshOwnerAgenda();
+            })
+            .catch(function (e) {
+              setHomeStatus(e.message || "Erro ao libertar.", true);
+            });
+        });
+      } else {
+        // DONE / past / lunch: sem ações
+      }
     }
+
+    if (actions.childNodes.length) row.appendChild(actions);
     wrap.appendChild(row);
   });
   host.appendChild(wrap);
