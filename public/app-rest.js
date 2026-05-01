@@ -1627,6 +1627,18 @@ async function init() {
         }
       });
     });
+    const ownerAgendaDate = $("ownerAgendaDate");
+    if (ownerAgendaDate) {
+      ownerAgendaDate.addEventListener("change", function () {
+        refreshOwnerAgenda().catch(function () {});
+      });
+    }
+    const ownerAgendaBarberSel = $("ownerAgendaBarberSelect");
+    if (ownerAgendaBarberSel) {
+      ownerAgendaBarberSel.addEventListener("change", function () {
+        refreshOwnerAgenda().catch(function () {});
+      });
+    }
   }
 
   // Owner Inbox UI
