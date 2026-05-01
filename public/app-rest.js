@@ -893,7 +893,7 @@ async function loadOwnerServicesPanel() {
     row.innerHTML =
       "<strong>" +
       safeText(s.name) +
-      "</strong><span class=\"muted\">" +
+      '</strong> <span class="muted">' +
       (Number(s.priceCents || 0) / 100).toFixed(2) +
       " · " +
       Number(s.durationMinutes || 30) +
