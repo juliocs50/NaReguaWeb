@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Barb x Go</title>
+    <script>
+      // GitHub Pages serves 404.html for unknown paths.
+      // Redirect everything to /public/ keeping the URL usable.
+      (function () {
+        try {
+          var path = window.location.pathname || "/";
+          // Find the repo prefix like /NaReguaWeb/ then redirect to /NaReguaWeb/public/
+          var parts = path.split("/").filter(Boolean);
+          var repo = parts.length ? parts[0] : "";
+          var target = "/" + (repo ? repo + "/" : "") + "public/";
+          window.location.replace(target);
+        } catch (_e) {
+          window.location.href = "./public/";
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    A redirecionar…
+  </body>
+</html>
+

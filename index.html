@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="refresh" content="0; url=./public/" />
+    <title>Barb x Go</title>
+    <script>
+      // GitHub Pages (branch deploy) supports /(root) or /docs.
+      // This repo keeps the actual static site in /public.
+      // Redirect root to /public so /NaReguaWeb/ works.
+      (function () {
+        try {
+          var base = (window.location.pathname || "").replace(/\/+$/, "/");
+          // Ensure trailing slash at repo root, then redirect.
+          if (!base.endsWith("/")) base = base + "/";
+          window.location.replace(base + "public/");
+        } catch (_e) {
+          window.location.href = "./public/";
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    A redirecionar…
+  </body>
+</html>
+
