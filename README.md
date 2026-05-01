@@ -1,21 +1,17 @@
 # Barb x Go (web) — agendamento para clientes
 
-Site estático que fala **direto com o Firestore** (SDK Web), como o app **Barb x Go** (Android): **mesmo projeto** `naregua-61564`, mesmas coleções `barbershops/{id}/barbers`, `services`, `appointments`.
-
-**Não é obrigatório usar Cloud Functions** para marcar horário neste site.
-
-## Firebase Console (uma vez)
-
-1. **Authentication** → **Sign-in method** → ativar **Anonymous** (anónimo).  
-   As regras atuais exigem `request.auth != null`; o site faz `signInAnonymously()`.
-
-2. **Firestore** → regras: o site usa utilizador **anónimo** (`request.auth != null`). A **página inicial** lista barbearias com `collection("barbershops").get()` — é preciso permitir **leitura em lista** da coleção `barbershops` (não só `get` num documento), por exemplo: `allow read: if request.auth != null` em `match /barbershops/{shopId}` (isso cobre queries na coleção).
+Site estático com frontend em `public/` e cliente REST em `public/api.js` (backend fora do site).
 
 ## Ficheiros
 
-- `public/firebase-config.js` — `apiKey` / `projectId` alinhados ao Android (`google-services.json`).
 - `public/schedule-engine.js` — geração de slots (igual ao `ScheduleEngine` do app).
-- `public/app.js` — leituras Firestore + transação ao confirmar marcação.
+- `public/api.js` — cliente REST (base configurável por `window.NAREGUA_API_BASE_URL`).
+- `public/app-rest.js` — UI e fluxo de agendamento/owner via REST.
+
+## Config local (não versionada)
+
+Se você for usar Google Maps no browser, crie `public/firebase-config.js` a partir de
+`public/firebase-config.example.js` e **não commite** chaves reais.
 
 ## URL por barbearia
 

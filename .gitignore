@@ -20,3 +20,6 @@ desktop.ini
 
 # Editores / IDE (opcional — remova a linha se quiser versionar)
 .idea/
+
+# Config local (NÃO commitar)
+public/firebase-config.js
