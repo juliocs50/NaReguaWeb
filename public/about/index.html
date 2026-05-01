@@ -11,23 +11,18 @@
       href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css" />
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-    <script src="/firebase-config.js"></script>
-    <script src="/schedule-engine.js"></script>
+    <link rel="stylesheet" href="../styles.css" />
   </head>
   <body class="layout-landing">
     <header class="top-bar" id="siteHeader">
       <div class="top-bar-inner">
-        <a href="/" class="brand" id="brandLink">
+        <a href="../../" class="brand" id="brandLink">
           <span class="brand-mark">Barb x Go</span>
           <span class="brand-sub">agendamento</span>
         </a>
         <div class="top-bar-right">
-          <a href="/" class="btn btn-landing-header-link">Início</a>
-          <a href="/#login" id="btnLoginShop" class="btn btn-landing-header-login">
+          <a href="../../" class="btn btn-landing-header-link">Início</a>
+          <a href="../../#login" id="btnLoginShop" class="btn btn-landing-header-login">
             <span class="btn-login-long">Entrar como barbearia</span>
             <span class="btn-login-short">Entrar</span>
           </a>
@@ -171,7 +166,36 @@
       </section>
     </main>
 
-    <script src="/app.js"></script>
+    <script>
+      // Página informativa (sem Firebase). Mantida simples para funcionar no GitHub Pages.
+      (function () {
+        try {
+          var a = document.getElementById("contactCadastroLink");
+          var line = document.getElementById("contactCadastroEmailLine");
+          var email = "barbxgo.app@gmail.com";
+          var subject = "Cadastro de barbearia — Barb x Go";
+          var body =
+            "Olá! Gostaria de solicitar o cadastro da minha barbearia no Barb x Go.\n\n" +
+            "Nome da barbearia:\n" +
+            "Cidade/Estado:\n" +
+            "Telefone/WhatsApp:\n" +
+            "Instagram (se tiver):\n\n" +
+            "Obrigado!";
+          var href =
+            "mailto:" +
+            encodeURIComponent(email) +
+            "?subject=" +
+            encodeURIComponent(subject) +
+            "&body=" +
+            encodeURIComponent(body);
+          if (a) a.href = href;
+          if (line) {
+            line.hidden = false;
+            line.textContent = "E-mail: " + email;
+          }
+        } catch (_e) {}
+      })();
+    </script>
   </body>
 </html>
 

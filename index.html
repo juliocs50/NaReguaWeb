@@ -10,16 +10,159 @@
       href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
-    <!-- Mantemos o site real em /public e carregamos daqui para suportar Pages (/(root)). -->
+    <!-- GitHub Pages (/(root)): o site real está em /public -->
     <link rel="stylesheet" href="./public/styles.css" />
     <script src="./public/schedule-engine.js"></script>
     <script src="./public/api.js"></script>
   </head>
-  <body>
+  <body class="layout-landing">
+    <header class="top-bar" id="siteHeader">
+      <div class="top-bar-inner">
+        <a href="./" class="brand" id="brandLink">
+          <span class="brand-mark">Barb x Go</span>
+          <span class="brand-sub">agendamento</span>
+        </a>
+        <div class="top-bar-right">
+          <span id="shopBadge" class="shop-badge" hidden>
+            <span class="shop-badge-avatar avatar-circle avatar-circle--sm" aria-hidden="true"></span>
+            <span id="shopBadgeText"></span>
+          </span>
+          <a href="./public/about/" id="btnAbout" class="btn btn-landing-header-link">Saiba mais</a>
+          <button type="button" id="btnLoginShop" class="btn btn-landing-header-login">
+            <span class="btn-login-long">Entrar como barbearia</span>
+            <span class="btn-login-short">Entrar</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="main">
+      <!-- Página inicial: dono ou cliente -->
+      <section id="homeLanding" class="landing-hero landing-page">
+        <div id="landingHeroBlock" class="landing-hero-center">
+          <h1 class="landing-hero-title">Marque o seu horário.</h1>
+          <p class="landing-hero-tagline">
+            Encontre uma barbearia parceira, veja disponibilidade e confirme o corte ou a barba — simples
+            e direto.
+          </p>
+          <button type="button" id="btnFindShop" class="btn btn-landing-hero-cta">
+            Encontrar barbearia
+          </button>
+          <button type="button" id="btnHeroRegisterShop" class="btn btn-landing-hero-secondary">
+            Cadastrar barbearia
+          </button>
+        </div>
+
+        <div id="loginCard" class="login-card landing-panel" hidden>
+          <h2 class="subsection-title" id="loginCardTitle">Login da barbearia</h2>
+
+          <div id="ownerLoginBlock">
+            <label class="field">
+              <span class="field-label">E-mail</span>
+              <input id="ownerEmail" type="email" autocomplete="username" />
+            </label>
+            <label class="field">
+              <span class="field-label">Senha</span>
+              <input id="ownerPassword" type="password" autocomplete="current-password" />
+            </label>
+            <div class="row landing-login-row-main">
+              <button type="button" id="ownerLoginSubmit" class="btn btn-filled">Entrar</button>
+              <button type="button" id="ownerRecoverPasswordBtn" class="btn btn-landing-header-link landing-login-link">
+                Recuperar senha
+              </button>
+            </div>
+            <div class="landing-login-row-back">
+              <button type="button" id="ownerLoginCancel" class="btn btn-outline btn-landing-login-back">
+                Voltar
+              </button>
+            </div>
+          </div>
+
+          <div id="ownerRegisterBlock" hidden>
+            <p class="muted owner-register-hint">
+              Use o código de liberação que recebeu por e-mail. Cada cadastro na web gera um código novo —
+              só quem receber o código atual consegue registar. O endereço pode ser preenchido depois, em
+              «Localização», no painel.
+            </p>
+            <label class="field">
+              <span class="field-label">Código de liberação</span>
+              <input id="ownerRegCode" type="text" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span class="field-label">E-mail</span>
+              <input id="ownerRegEmail" type="email" autocomplete="email" />
+            </label>
+            <label class="field">
+              <span class="field-label">Senha</span>
+              <input id="ownerRegPassword" type="password" autocomplete="new-password" minlength="6" />
+            </label>
+            <label class="field">
+              <span class="field-label">Confirmar senha</span>
+              <input id="ownerRegPasswordConfirm" type="password" autocomplete="new-password" minlength="6" />
+            </label>
+            <label class="field">
+              <span class="field-label">Nome da barbearia</span>
+              <input id="ownerRegShopName" type="text" autocomplete="organization" />
+            </label>
+            <label class="field">
+              <span class="field-label">Telefone</span>
+              <input id="ownerRegPhone" type="tel" autocomplete="tel" />
+            </label>
+            <div class="row landing-login-actions">
+              <button type="button" id="ownerRegisterSubmit" class="btn btn-filled">Criar conta</button>
+              <button type="button" id="ownerRegisterBackBtn" class="btn btn-outline">Voltar ao login</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="findStub" class="find-stub landing-panel card-inner" hidden>
+          <h2 class="subsection-title">Encontrar barbearia</h2>
+          <p class="muted find-shop-intro">
+            <strong>Por nome:</strong> pelo menos duas letras e <strong>Procurar</strong>.
+            <strong>Perto de si:</strong> use a sua localização (o navegador pede permissão) e veja
+            barbearias com endereço no mapa até ao raio escolhido.
+          </p>
+          <form id="findShopForm" class="find-shop-form">
+            <label class="field find-shop-field">
+              <span class="field-label">Nome da barbearia</span>
+              <input
+                id="findShopQuery"
+                type="search"
+                name="q"
+                autocomplete="organization"
+                placeholder="Ex.: JaBarber, cortes…"
+                maxlength="80"
+              />
+            </label>
+            <button type="submit" class="btn btn-filled find-shop-submit">Procurar</button>
+          </form>
+          <div class="find-shop-nearby">
+            <label class="field find-shop-radius-field">
+              <span class="field-label">Raio</span>
+              <select id="findNearbyRadius" class="find-shop-radius">
+                <option value="10">10 km</option>
+                <option value="25">25 km</option>
+                <option value="40" selected>40 km</option>
+              </select>
+            </label>
+            <button type="button" id="findNearbyBtn" class="btn btn-outline find-nearby-btn">
+              Usar a minha localização
+            </button>
+          </div>
+          <p id="findShopStatus" class="muted find-shop-status" role="status" aria-live="polite"></p>
+          <div id="findShopResults" class="find-shop-results" hidden></div>
+          <button type="button" id="findStubBack" class="btn btn-outline find-shop-back">Voltar</button>
+        </div>
+
+        <div class="landing-extra landing-footer-info">
+          <p class="landing-copyright">© Barb x Go</p>
+        </div>
+
+        <div id="homeStatus" class="msg landing-status-msg" role="status" aria-live="polite"></div>
+      </section>
+    </main>
+
     <noscript>Ative o JavaScript para usar o Barb x Go.</noscript>
-
-    <div id="appRoot"></div>
-
     <script src="./public/app-rest.js?v=20260501"></script>
   </body>
 </html>
