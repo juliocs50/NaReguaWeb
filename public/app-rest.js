@@ -367,6 +367,28 @@ async function ownerWhatsAppClick() {
   window.open(wa, "_blank", "noopener");
 }
 
+/** Avatar da loja + lista de barbeiros: não bloqueia o login (corre em paralelo). */
+function loadOwnerPortalExtrasInBackground(shopId) {
+  if (!shopId) return;
+  void Promise.all([
+    (async function () {
+      try {
+        const full = await NaReguaApi.publicShopById(shopId);
+        if (full && full.shop) {
+          const s = full.shop;
+          window.__ownerShopFull = s;
+          const badge = $("shopBadge");
+          if (badge) {
+            const av = badge.querySelector(".shop-badge-avatar");
+            setAvatarCircle(av, s.avatarDataUrl, s.name || "?");
+          }
+        }
+      } catch (_e) {}
+    })(),
+    loadOwnerBarbersPanel(),
+  ]).catch(function () {});
+}
+
 async function ownerLoginSubmit() {
   const email = ($("ownerEmail") && $("ownerEmail").value) || "";
   const password = ($("ownerPassword") && $("ownerPassword").value) || "";
@@ -378,27 +400,17 @@ async function ownerLoginSubmit() {
   try {
     const res = await NaReguaApi.authLogin(email, password);
     NaReguaApi.setOwnerToken(res.token);
-    const me = await NaReguaApi.usersMe();
-    const shop = me.shop;
+    let shop = res.shop;
+    if (!shop || !shop.id) {
+      const me = await NaReguaApi.usersMe();
+      shop = me.shop;
+    }
     if (!shop || !shop.id) throw new Error("Conta sem barbearia associada.");
     window.__ownerShopId = shop.id;
     window.__ownerShopName = shop.name || "";
     setHomeStatus("");
     showOwnerPortal(window.__ownerShopName);
-    // load full shop (avatar) for header
-    try {
-      const full = await NaReguaApi.publicShopById(shop.id);
-      if (full && full.shop) {
-        const s = full.shop;
-        window.__ownerShopFull = s;
-        const badge = $("shopBadge");
-        if (badge) {
-          const av = badge.querySelector(".shop-badge-avatar");
-          setAvatarCircle(av, s.avatarDataUrl, s.name || "?");
-        }
-      }
-    } catch (_e) {}
-    await loadOwnerBarbersPanel();
+    loadOwnerPortalExtrasInBackground(shop.id);
   } catch (e) {
     setHomeStatus(e.message || "Falha ao entrar.", true);
   }
@@ -1709,8 +1721,8 @@ async function init() {
     showLandingHome();
   }
 
-  // Auto-restore owner session
-  if (NaReguaApi.getOwnerToken && NaReguaApi.getOwnerToken()) {
+  // Auto-restore owner session só na página inicial — não em links públicos /slug (agendamento).
+  if (!slug && NaReguaApi.getOwnerToken && NaReguaApi.getOwnerToken()) {
     try {
       const me = await NaReguaApi.usersMe();
       const shop = me.shop;
@@ -1718,21 +1730,8 @@ async function init() {
         window.__ownerShopId = shop.id;
         window.__ownerShopName = shop.name || "";
         showOwnerPortal(window.__ownerShopName);
-        // load full shop (avatar) for header
-        try {
-          const full = await NaReguaApi.publicShopById(shop.id);
-          if (full && full.shop) {
-            const s = full.shop;
-            window.__ownerShopFull = s;
-            const badge = $("shopBadge");
-            if (badge) {
-              const av = badge.querySelector(".shop-badge-avatar");
-              setAvatarCircle(av, s.avatarDataUrl, s.name || "?");
-            }
-          }
-        } catch (_e) {}
         switchOwnerTab("barbers");
-        await loadOwnerBarbersPanel();
+        loadOwnerPortalExtrasInBackground(shop.id);
       }
     } catch (_e) {
       NaReguaApi.setOwnerToken("");
