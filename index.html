@@ -3,26 +3,24 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta http-equiv="refresh" content="0; url=./public/" />
     <title>Barb x Go</title>
-    <script>
-      // GitHub Pages (branch deploy) supports /(root) or /docs.
-      // This repo keeps the actual static site in /public.
-      // Redirect root to /public so /NaReguaWeb/ works.
-      (function () {
-        try {
-          var base = (window.location.pathname || "").replace(/\/+$/, "/");
-          // Ensure trailing slash at repo root, then redirect.
-          if (!base.endsWith("/")) base = base + "/";
-          window.location.replace(base + "public/");
-        } catch (_e) {
-          window.location.href = "./public/";
-        }
-      })();
-    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Mantemos o site real em /public e carregamos daqui para suportar Pages (/(root)). -->
+    <link rel="stylesheet" href="./public/styles.css" />
+    <script src="./public/schedule-engine.js"></script>
+    <script src="./public/api.js"></script>
   </head>
   <body>
-    A redirecionar…
+    <noscript>Ative o JavaScript para usar o Barb x Go.</noscript>
+
+    <div id="appRoot"></div>
+
+    <script src="./public/app-rest.js?v=20260501"></script>
   </body>
 </html>
 

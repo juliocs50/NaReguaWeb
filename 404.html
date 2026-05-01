@@ -5,18 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Barb x Go</title>
     <script>
-      // GitHub Pages serves 404.html for unknown paths.
-      // Redirect everything to /public/ keeping the URL usable.
+      // GitHub Pages não suporta rewrite para SPA/rotas.
+      // Usamos 404.html para redirecionar /<slug> para /?p=<slug>,
+      // onde o app lê o parâmetro e carrega o agendamento.
       (function () {
         try {
           var path = window.location.pathname || "/";
-          // Find the repo prefix like /NaReguaWeb/ then redirect to /NaReguaWeb/public/
           var parts = path.split("/").filter(Boolean);
-          var repo = parts.length ? parts[0] : "";
-          var target = "/" + (repo ? repo + "/" : "") + "public/";
-          window.location.replace(target);
+          if (!parts.length) {
+            window.location.replace("./");
+            return;
+          }
+
+          // Não interceptar páginas reais
+          var first = parts[0];
+          if (first === "public" || first === "about" || first === "index.html") {
+            window.location.replace("./");
+            return;
+          }
+
+          var slug = decodeURIComponent(first);
+          window.location.replace("./?p=" + encodeURIComponent(slug));
         } catch (_e) {
-          window.location.href = "./public/";
+          window.location.href = "./";
         }
       })();
     </script>

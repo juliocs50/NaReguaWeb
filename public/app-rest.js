@@ -38,11 +38,17 @@ function toDateKey(date = new Date()) {
 }
 
 function getSlugFromPath() {
+  try {
+    const qp = new URLSearchParams(window.location.search || "");
+    const from404 = (qp.get("p") || "").trim();
+    if (from404) return from404;
+  } catch (_e) {}
   let path = window.location.pathname || "/";
   if (path.endsWith("/") && path.length > 1) path = path.slice(0, -1);
   const parts = path.split("/").filter(Boolean);
   if (parts.length === 0) return null;
   const first = parts[0];
+  if (first === "public") return null;
   if (first === "about") return null;
   if (first === "index.html") return null;
   return decodeURIComponent(first);
