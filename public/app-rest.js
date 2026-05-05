@@ -365,8 +365,10 @@ function startOwnerInboxPoll() {
   stopOwnerInboxPoll();
   ownerInboxPollTimer = setInterval(function () {
     loadOwnerInboxOnce().catch(function () {});
+    refreshOwnerAgenda().catch(function () {});
   }, 2500);
   loadOwnerInboxOnce().catch(function () {});
+  refreshOwnerAgenda().catch(function () {});
 }
 
 function switchOwnerTab(name) {
