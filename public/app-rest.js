@@ -117,6 +117,7 @@ function applyBookingHeadlines(shopName) {
 }
 
 function showLandingHome() {
+  stopPublicBookingPoll();
   document.body.classList.remove("layout-app");
   document.body.classList.add("layout-landing");
   const app = $("app");
@@ -153,6 +154,7 @@ function showBookingApp(shopName) {
 }
 
 function showOwnerPortal(shopName) {
+  stopPublicBookingPoll();
   const app = $("app");
   setElHidden(app, true);
   const home = $("homeLanding");
@@ -216,6 +218,21 @@ const OWNER_INBOX_LAST_CLOSED_PREFIX = "barbxgo_owner_inbox_last_closed_";
 let ownerInboxPollTimer = null;
 let ownerInboxOverlayOpen = false;
 let ownerInboxUnread = 0;
+
+/** Cliente em /slug: atualizar grade e slots quando outros marcam ou a loja cancela. */
+let publicBookingPollTimer = null;
+
+function stopPublicBookingPoll() {
+  if (publicBookingPollTimer) clearInterval(publicBookingPollTimer);
+  publicBookingPollTimer = null;
+}
+
+function startPublicBookingPoll() {
+  stopPublicBookingPoll();
+  publicBookingPollTimer = setInterval(function () {
+    refreshAppointmentsAndSlots().catch(function () {});
+  }, 3000);
+}
 
 function ownerInboxLastClosedStorageKey(shopId, barberId) {
   const s = String(shopId || "").replace(/\|/g, "");
@@ -1307,6 +1324,7 @@ async function runFindShopNearby() {
 
 // Booking page (public)
 async function loadBookingBySlug(slug) {
+  stopPublicBookingPoll();
   setStatus("A carregar…");
   try {
     await NaReguaApi.ensureGuestToken();
@@ -1378,7 +1396,9 @@ async function loadBookingBySlug(slug) {
 
     await refreshAppointmentsAndSlots();
     renderSelectedBarberCard();
+    startPublicBookingPoll();
   } catch (e) {
+    stopPublicBookingPoll();
     setStatus(e.message || "Erro ao carregar.", true);
   }
 }
@@ -1480,6 +1500,7 @@ function renderDayAgenda(barber, dateKey, apptsForBarber) {
 }
 
 function renderClientAvailabilityFromAppts(appts, shopId, dateKey, barberId) {
+  const prevSelected = String(window.__selectedTimeLabel || "").trim();
   const slotsEl = $("slots");
   const cancelBtn = $("cancelBtn");
   if (cancelBtn) {
@@ -1492,6 +1513,7 @@ function renderClientAvailabilityFromAppts(appts, shopId, dateKey, barberId) {
   });
   if (!barber) {
     if (slotsEl) slotsEl.innerHTML = "";
+    window.__selectedTimeLabel = null;
     setStatus("Barbeiro inválido.", true);
     return;
   }
@@ -1539,9 +1561,9 @@ function renderClientAvailabilityFromAppts(appts, shopId, dateKey, barberId) {
 
   if (!slotsEl) return;
   slotsEl.innerHTML = "";
-  window.__selectedTimeLabel = null;
 
   if (!slots.length) {
+    window.__selectedTimeLabel = null;
     if (rawSlots.length) {
       slotsEl.innerHTML =
         '<p class="muted">Os horários deste dia para este barbeiro já passaram. Tente amanhã ou outro dia.</p>';
@@ -1568,7 +1590,22 @@ function renderClientAvailabilityFromAppts(appts, shopId, dateKey, barberId) {
     slotsEl.appendChild(btn);
   });
 
-  setStatus("Toque em um horário livre.");
+  if (prevSelected && slots.indexOf(prevSelected) >= 0) {
+    window.__selectedTimeLabel = prevSelected;
+    slotsEl.querySelectorAll(".slot").forEach(function (btn) {
+      if (String(btn.textContent || "").trim() === prevSelected) {
+        btn.classList.add("selected");
+      }
+    });
+    setStatus("Toque em um horário livre.");
+  } else {
+    window.__selectedTimeLabel = null;
+    if (prevSelected) {
+      setStatus("O horário que tinha escolhido já não está livre. Escolha outro.", true);
+    } else {
+      setStatus("Toque em um horário livre.");
+    }
+  }
 }
 
 async function bookClick() {
