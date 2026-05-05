@@ -299,6 +299,16 @@ body.layout-landing .landing-copyright {
   color: rgba(255, 255, 255, 0.38);
 }
 
+body.layout-landing .landing-copyright a {
+  color: rgba(255, 255, 255, 0.55);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+body.layout-landing .landing-copyright a:hover {
+  color: rgba(255, 255, 255, 0.85);
+}
+
 /* Rodapé da página Sobre: cartão único, grelha, ícones sociais */
 .about-page-footer {
   width: 100%;

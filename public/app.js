@@ -105,6 +105,7 @@ function getSlugFromPath() {
   if (parts.length === 0) return null;
   const first = parts[0];
   if (first === "about") return null;
+  if (first === "privacy") return null;
   if (first === "index.html") return null;
   return decodeURIComponent(first);
 }
