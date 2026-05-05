@@ -22,5 +22,6 @@ O agendamento do cliente usa o **primeiro segmento do path** como slug da barbea
 - **Vercel (fluxo actual):** na raiz está `vercel.json` — `outputDirectory` = `public/` e **rewrites** para servir `index.html` nas rotas dinâmicas (`/:slug`), necessário para o SPA funcionar ao refrescar ou partilhar link.
 - **Domínio:** na raiz existe `CNAME` (`www.barbxgo.app`), útil em fluxos tipo **GitHub Pages**; na Vercel o domínio customizado confirma-se no painel do projeto (o ficheiro pode coexistir com o deploy na Vercel).
 - **Netlify:** existe `netlify.toml` com redirect SPA (`/*` → `index.html`); só é relevante se o site estiver ligado ao Netlify. Se não usas Netlify, podes ignorar ou remover esse ficheiro noutro PR.
+- **GitHub Pages:** workflow em `.github/workflows/pages.yml` publica `public/`. Em URLs `https://user.github.io/repo/` o cliente remove o prefixo do repo ao ler o slug (inferido pelo URL de `app-rest.js`), para não confundir o nome do repo com o slug da barbearia.
 
 Não é necessário proxy `/api` no hosting: a API é outro origin (CORS tratado no backend).

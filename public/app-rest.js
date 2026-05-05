@@ -44,13 +44,52 @@ function toDateKey(date = new Date()) {
   return `${y}-${m}-${d}`;
 }
 
+/** GitHub Pages em /user/repo/ — o primeiro segmento é o repo, não o slug. Inferimos o prefixo pelo URL do app-rest.js. */
+var __nareguaStaticBasePath;
+function inferStaticBasePathFromScript() {
+  try {
+    const el = document.querySelector('script[src*="app-rest"]');
+    if (!el) return "";
+    const src = el.getAttribute("src") || "";
+    const abs = new URL(src, window.location.href);
+    let p = String(abs.pathname || "").replace(/\\/g, "/");
+    const lower = p.toLowerCase();
+    const cut = lower.lastIndexOf("/app-rest");
+    if (cut >= 0) p = p.slice(0, cut);
+    return p.replace(/\/$/, "") || "";
+  } catch (_e) {
+    return "";
+  }
+}
+
+function getStaticBasePath() {
+  if (__nareguaStaticBasePath === void 0) {
+    __nareguaStaticBasePath = inferStaticBasePathFromScript();
+  }
+  return __nareguaStaticBasePath || "";
+}
+
+function pathWithoutStaticBase(pathname) {
+  let full = String(pathname || "/").replace(/\\/g, "/");
+  if (full.length > 1 && full.endsWith("/")) full = full.slice(0, -1);
+  const base = getStaticBasePath();
+  if (!base) return full || "/";
+  if (full === base) return "/";
+  const pref = base + "/";
+  if (full.startsWith(pref)) {
+    const rest = full.slice(pref.length);
+    return rest ? "/" + rest : "/";
+  }
+  return full;
+}
+
 function getSlugFromPath() {
   try {
     const qp = new URLSearchParams(window.location.search || "");
     const from404 = (qp.get("p") || "").trim();
     if (from404) return from404;
   } catch (_e) {}
-  let path = window.location.pathname || "/";
+  let path = pathWithoutStaticBase(window.location.pathname || "/");
   if (path.endsWith("/") && path.length > 1) path = path.slice(0, -1);
   const parts = path.split("/").filter(Boolean);
   if (parts.length === 0) return null;
