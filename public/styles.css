@@ -143,6 +143,17 @@ body.layout-landing .landing-page {
   border-radius: 0;
 }
 
+/*
+  Com [hidden], o UA usa display:none — mas regras nossas como .landing-page { display:flex }
+  podem ganhar por especificidade e a landing continua por cima do painel do dono (ecrã “vazio”).
+*/
+#homeLanding[hidden],
+#app[hidden],
+#ownerPortal[hidden],
+.owner-panel[hidden] {
+  display: none !important;
+}
+
 body.layout-landing .landing-hero-center {
   flex: 1;
   display: flex;

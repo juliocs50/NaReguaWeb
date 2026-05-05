@@ -9,6 +9,13 @@
 
 const $ = (id) => document.getElementById(id);
 
+/** [hidden] + CSS author (ex.: .landing-page flex) — usar isto em vez de só .hidden onde interessa. */
+function setElHidden(el, hidden) {
+  if (!el) return;
+  if (hidden) el.setAttribute("hidden", "");
+  else el.removeAttribute("hidden");
+}
+
 function setFindShopStatus(msg, isError) {
   const el = $("findShopStatus");
   if (!el) return;
@@ -74,14 +81,14 @@ function showLandingHome() {
   document.body.classList.remove("layout-app");
   document.body.classList.add("layout-landing");
   const app = $("app");
-  if (app) app.hidden = true;
+  setElHidden(app, true);
   const home = $("homeLanding");
-  if (home) home.hidden = false;
+  setElHidden(home, false);
   const owner = $("ownerPortal");
-  if (owner) owner.hidden = true;
+  setElHidden(owner, true);
   const badge = $("shopBadge");
   if (badge) {
-    badge.hidden = true;
+    setElHidden(badge, true);
     const t = $("shopBadgeText");
     if (t) t.textContent = "";
     const av = badge.querySelector(".shop-badge-avatar");
@@ -93,35 +100,35 @@ function showBookingApp(shopName) {
   document.body.classList.remove("layout-landing");
   document.body.classList.add("layout-app");
   const app = $("app");
-  if (app) app.hidden = false;
+  setElHidden(app, false);
   const home = $("homeLanding");
-  if (home) home.hidden = true;
+  setElHidden(home, true);
   const owner = $("ownerPortal");
-  if (owner) owner.hidden = true;
+  setElHidden(owner, true);
   const badge = $("shopBadge");
   if (badge) {
-    badge.hidden = false;
+    setElHidden(badge, false);
     const t = $("shopBadgeText");
     if (t) t.textContent = shopName || "";
   }
 }
 
 function showOwnerPortal(shopName) {
+  const app = $("app");
+  setElHidden(app, true);
+  const home = $("homeLanding");
+  setElHidden(home, true);
+  const loginCard = $("loginCard");
+  setElHidden(loginCard, true);
   document.body.classList.remove("layout-landing");
   document.body.classList.add("layout-app");
-  const app = $("app");
-  if (app) app.hidden = true;
-  const home = $("homeLanding");
-  if (home) home.hidden = true;
-  const loginCard = $("loginCard");
-  if (loginCard) loginCard.hidden = true;
   const owner = $("ownerPortal");
-  if (owner) owner.hidden = false;
+  setElHidden(owner, false);
   const title = $("ownerShopTitle");
   if (title) title.textContent = shopName || "Barbearia";
   const badge = $("shopBadge");
   if (badge) {
-    badge.hidden = false;
+    setElHidden(badge, false);
     const t = $("shopBadgeText");
     if (t) t.textContent = shopName || "";
   }
@@ -326,17 +333,27 @@ function startOwnerInboxPoll() {
 function switchOwnerTab(name) {
   const portal = $("ownerPortal");
   if (!portal) return;
+  const allowed = {
+    barbers: true,
+    agenda: true,
+    menu: true,
+    finance: true,
+    location: true,
+    platformAdmin: true,
+  };
+  const raw = String(name == null ? "" : name).trim();
+  const tab = allowed[raw] ? raw : "barbers";
   const panels = portal.querySelectorAll("[data-panel]");
   panels.forEach(function (p) {
-    p.hidden = p.getAttribute("data-panel") !== name;
+    setElHidden(p, p.getAttribute("data-panel") !== tab);
   });
   const tabs = portal.querySelectorAll(".owner-tab");
   tabs.forEach(function (b) {
-    b.classList.toggle("is-active", b.getAttribute("data-owner-tab") === name);
+    b.classList.toggle("is-active", b.getAttribute("data-owner-tab") === tab);
   });
 
   // Inbox FAB only on agenda
-  if (name === "agenda") {
+  if (tab === "agenda") {
     showOwnerInboxFab(true);
     startOwnerInboxPoll();
   } else {
@@ -344,6 +361,7 @@ function switchOwnerTab(name) {
     stopOwnerInboxPoll();
   }
 }
+
 
 function shopPublicUrlFromShopData(shop) {
   const base = String(window.location.origin || "").replace(/\/$/, "");
