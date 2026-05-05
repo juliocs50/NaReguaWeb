@@ -113,6 +113,8 @@ function showOwnerPortal(shopName) {
   if (app) app.hidden = true;
   const home = $("homeLanding");
   if (home) home.hidden = true;
+  const loginCard = $("loginCard");
+  if (loginCard) loginCard.hidden = true;
   const owner = $("ownerPortal");
   if (owner) owner.hidden = false;
   const title = $("ownerShopTitle");
@@ -123,6 +125,8 @@ function showOwnerPortal(shopName) {
     const t = $("shopBadgeText");
     if (t) t.textContent = shopName || "";
   }
+  // Sempre alinhar painéis ao entrar (login manual não chamava switchOwnerTab antes).
+  switchOwnerTab("barbers");
 }
 
 function setAvatarCircle(el, dataUrl, fallbackText) {
@@ -1748,7 +1752,6 @@ async function init() {
         window.__ownerShopId = shop.id;
         window.__ownerShopName = shop.name || "";
         showOwnerPortal(window.__ownerShopName);
-        switchOwnerTab("barbers");
         loadOwnerPortalExtrasInBackground(shop.id);
       }
     } catch (_e) {
