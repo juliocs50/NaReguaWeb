@@ -97,6 +97,7 @@ function getSlugFromPath() {
   if (first === "public") return null;
   if (first === "about") return null;
   if (first === "privacy") return null;
+  if (/^deleteaccount$/i.test(first)) return null;
   if (first === "index.html") return null;
   return decodeURIComponent(first);
 }

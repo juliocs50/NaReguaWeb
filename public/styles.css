@@ -2236,3 +2236,132 @@ select:focus {
     grid-template-columns: 1fr;
   }
 }
+
+/* —— BarbxGo: exclusão de conta (Play Console) —— */
+body.delete-account-page {
+  padding-top: 72px;
+}
+
+.delete-account-page .delete-account-wrap {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 20px 48px;
+}
+
+.delete-account-page .delete-account-lead {
+  text-align: center;
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.delete-account-page .delete-account-card {
+  max-width: 420px;
+  margin: 0 auto 1.5rem;
+  padding: 1.25rem 1.35rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.delete-account-page .delete-account-card .field {
+  margin-bottom: 0.85rem;
+}
+
+.delete-account-page .delete-account-card .btn-delete-submit {
+  width: 100%;
+  margin-top: 0.35rem;
+  background: #b71c1c;
+  color: #fff;
+  border: none;
+}
+
+.delete-account-page .delete-account-card .btn-delete-submit:hover {
+  background: #d32f2f;
+  color: #fff;
+}
+
+.delete-account-page .delete-account-card .btn-delete-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.delete-account-page .delete-account-msg {
+  max-width: 420px;
+  margin: 0.75rem auto 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.delete-account-page .delete-account-msg.ok {
+  color: rgba(165, 214, 167, 0.95);
+}
+
+.delete-account-page .delete-account-msg.err {
+  color: var(--danger);
+}
+
+.delete-account-page .delete-account-lang-grid {
+  display: grid;
+  gap: 1rem 1.5rem;
+  margin-top: 1.25rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+@media (min-width: 720px) {
+  .delete-account-page .delete-account-lang-grid {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+}
+
+.delete-account-page .delete-account-lang-col {
+  padding: 1rem 1.1rem;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.delete-account-page .delete-account-lang-col h2 {
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+}
+
+.delete-account-page .delete-account-lang-col h3 {
+  font-size: 0.82rem;
+  margin: 0.75rem 0 0.25rem;
+  font-weight: 600;
+  opacity: 0.95;
+}
+
+.delete-account-page .delete-account-lang-col p,
+.delete-account-page .delete-account-lang-col ul {
+  margin: 0.35rem 0;
+}
+
+.delete-account-page .delete-account-lang-col ul {
+  padding-left: 1.1rem;
+}
+
+.delete-account-page .delete-account-lang-col a {
+  color: rgba(129, 212, 250, 0.95);
+}
+
+.delete-account-page .delete-account-confirm-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0.25rem;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.delete-account-page .delete-account-confirm-row input {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+}

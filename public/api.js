@@ -135,6 +135,16 @@
         body: { email: String(email || "").trim(), password: String(password || "") },
       });
     },
+    /** Permanent account deletion (BarbxGo / web owner account). Backend: POST /delete-account */
+    deleteAccount: function (email, password) {
+      return fetchJson("/delete-account", {
+        method: "POST",
+        body: {
+          email: String(email || "").trim(),
+          password: String(password || ""),
+        },
+      });
+    },
     usersMe: async function () {
       const bearer = await ownerBearer();
       return fetchJson("/users/me", { headers: { Authorization: bearer } });

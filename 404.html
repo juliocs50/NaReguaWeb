@@ -19,7 +19,13 @@
 
           // Não interceptar páginas reais
           var first = parts[0];
-          if (first === "public" || first === "about" || first === "privacy" || first === "index.html") {
+          if (
+            first === "public" ||
+            first === "about" ||
+            first === "privacy" ||
+            (first && first.toLowerCase() === "deleteaccount") ||
+            first === "index.html"
+          ) {
             window.location.replace("./");
             return;
           }

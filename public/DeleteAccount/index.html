@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <title>Exclusão de conta · BarbxGo</title>
+    <meta
+      name="description"
+      content="BarbxGo — solicitar exclusão permanente da conta e dos dados associados (PT/EN)."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../styles.css" />
+    <script src="../api.js"></script>
+  </head>
+  <body class="layout-landing delete-account-page">
+    <header class="top-bar" id="siteHeader">
+      <div class="top-bar-inner">
+        <a href="../../" class="brand" id="brandLink">
+          <span class="brand-mark">BarbxGo</span>
+          <span class="brand-sub">exclusão de conta</span>
+        </a>
+        <div class="top-bar-right">
+          <a href="../../" class="btn btn-landing-header-link">Início</a>
+          <a href="../../privacy/" class="btn btn-landing-header-link">Privacidade</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="landing-page about-page">
+        <div class="landing-hero-center about-hero" style="padding-bottom: 0.5rem">
+          <p class="delete-account-lead" style="max-width: 36rem; margin-left: auto; margin-right: auto">
+            <span lang="pt-BR">Página pública — não é necessário iniciar sessão.</span>
+            <span class="landing-copyright-sep" aria-hidden="true"> · </span>
+            <span lang="en">Public page — no sign-in required.</span>
+          </p>
+        </div>
+
+        <div class="delete-account-wrap">
+          <form id="deleteAccountForm" class="delete-account-card" novalidate>
+            <h1 class="subsection-title" style="margin-top: 0; font-size: 1.1rem">
+              <span lang="pt-BR">Excluir conta</span>
+              <span class="muted" style="font-weight: 400; display: block; font-size: 0.85rem; margin-top: 0.2rem">
+                <span lang="en">Delete account</span>
+              </span>
+            </h1>
+
+            <label class="field">
+              <span class="field-label">E-mail <span lang="en">(email)</span></span>
+              <input
+                id="delEmail"
+                name="email"
+                type="email"
+                autocomplete="username"
+                required
+                maxlength="320"
+              />
+            </label>
+            <label class="field">
+              <span class="field-label">Senha <span lang="en">(password)</span></span>
+              <input
+                id="delPassword"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                required
+                minlength="1"
+                maxlength="200"
+              />
+            </label>
+
+            <label class="delete-account-confirm-row">
+              <input id="delConfirm" type="checkbox" required />
+              <span>
+                <strong lang="pt-BR">Confirmo que quero apagar permanentemente a minha conta BarbxGo e os dados associados.</strong>
+                <span lang="en" style="display: block; margin-top: 0.25rem; font-weight: 500">
+                  I confirm that I want to permanently delete my BarbxGo account and associated data.
+                </span>
+              </span>
+            </label>
+
+            <button type="submit" id="delSubmit" class="btn btn-filled btn-delete-submit">
+              Excluir conta · Delete account
+            </button>
+          </form>
+
+          <div id="delMsg" class="delete-account-msg" role="status" aria-live="polite" hidden></div>
+
+          <div class="delete-account-lang-toolbar" style="text-align: center; margin: 0.5rem 0 0">
+            <span class="muted" style="font-size: 0.78rem">PT / EN</span>
+            <div style="margin-top: 0.35rem">
+              <button type="button" class="btn btn-outline btn-sm" id="tabShowBoth" style="margin: 0 4px">
+                Ambos / Both
+              </button>
+              <button type="button" class="btn btn-outline btn-sm" id="tabShowPt" style="margin: 0 4px">PT</button>
+              <button type="button" class="btn btn-outline btn-sm" id="tabShowEn" style="margin: 0 4px">EN</button>
+            </div>
+          </div>
+
+          <div id="langGrid" class="delete-account-lang-grid" data-view="both">
+            <div class="delete-account-lang-col delete-account-lang-col--pt" id="colPt" lang="pt-BR">
+              <h2>Exclusão de Conta – BarbxGo</h2>
+              <p>
+                Os usuários podem solicitar a exclusão da conta diretamente nesta página.
+              </p>
+              <h3>Passos</h3>
+              <ol>
+                <li>Insira seu e-mail e senha</li>
+                <li>Confirme a solicitação de exclusão</li>
+              </ol>
+              <h3>Dados excluídos</h3>
+              <ul>
+                <li>Informações da conta (e-mail, nome)</li>
+                <li>Todos os dados associados ao usuário</li>
+              </ul>
+              <h3>Dados que podem ser mantidos</h3>
+              <ul>
+                <li>Dados necessários para obrigações legais, se aplicável</li>
+              </ul>
+              <h3>Contacto</h3>
+              <p>
+                Se você não conseguir acessar sua conta, entre em contato:
+                <a href="mailto:support@barbxgo.app">support@barbxgo.app</a>
+              </p>
+            </div>
+
+            <div class="delete-account-lang-col delete-account-lang-col--en" id="colEn" lang="en">
+              <h2>Account Deletion – BarbxGo</h2>
+              <p>Users can request account deletion directly on this page.</p>
+              <h3>Steps</h3>
+              <ol>
+                <li>Enter your email and password</li>
+                <li>Confirm the deletion request</li>
+              </ol>
+              <h3>Data deleted</h3>
+              <ul>
+                <li>Account information (email, name)</li>
+                <li>All associated user data</li>
+              </ul>
+              <h3>Data retained</h3>
+              <ul>
+                <li>Data required for legal obligations, if applicable</li>
+              </ul>
+              <h3>Contact</h3>
+              <p>
+                If you cannot access your account, contact:
+                <a href="mailto:support@barbxgo.app">support@barbxgo.app</a>
+              </p>
+            </div>
+          </div>
+
+          <p class="landing-copyright" style="margin-top: 1.5rem">
+            © BarbxGo · <a href="../../">Início</a>
+            <span class="landing-copyright-sep" aria-hidden="true"> · </span>
+            <a href="mailto:support@barbxgo.app">support@barbxgo.app</a>
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <style>
+      #langGrid[data-view="pt"] .delete-account-lang-col--en {
+        display: none;
+      }
+      #langGrid[data-view="en"] .delete-account-lang-col--pt {
+        display: none;
+      }
+      @media (min-width: 720px) {
+        .delete-account-lang-toolbar {
+          display: none;
+        }
+        #langGrid .delete-account-lang-col--pt,
+        #langGrid .delete-account-lang-col--en {
+          display: block !important;
+        }
+      }
+    </style>
+
+    <script>
+      (function () {
+        var grid = document.getElementById("langGrid");
+        function setView(v) {
+          if (!grid) return;
+          grid.setAttribute("data-view", v);
+        }
+        var bBoth = document.getElementById("tabShowBoth");
+        var bPt = document.getElementById("tabShowPt");
+        var bEn = document.getElementById("tabShowEn");
+        if (bBoth) bBoth.addEventListener("click", function () { setView("both"); });
+        if (bPt) bPt.addEventListener("click", function () { setView("pt"); });
+        if (bEn) bEn.addEventListener("click", function () { setView("en"); });
+
+        var form = document.getElementById("deleteAccountForm");
+        var msg = document.getElementById("delMsg");
+        var btn = document.getElementById("delSubmit");
+
+        function clearMsg() {
+          if (!msg) return;
+          msg.hidden = true;
+          msg.textContent = "";
+          msg.className = "delete-account-msg";
+        }
+
+        function showErr(textPt, textEn, withResetHint) {
+          if (!msg) return;
+          msg.hidden = false;
+          msg.className = "delete-account-msg err";
+          msg.innerHTML = "";
+          var p1 = document.createElement("p");
+          p1.lang = "pt-BR";
+          p1.textContent = textPt;
+          msg.appendChild(p1);
+          var p2 = document.createElement("p");
+          p2.lang = "en";
+          p2.style.marginTop = "0.35rem";
+          p2.textContent = textEn;
+          msg.appendChild(p2);
+          if (withResetHint) {
+            var mail =
+              "mailto:support@barbxgo.app?subject=" +
+              encodeURIComponent("BarbxGo — redefinição de senha / password reset");
+            var p3 = document.createElement("p");
+            p3.lang = "pt-BR";
+            p3.style.marginTop = "0.5rem";
+            p3.appendChild(document.createTextNode("Esqueceu a senha ou não consegue entrar? Envie e-mail para "));
+            var a = document.createElement("a");
+            a.href = mail;
+            a.textContent = "support@barbxgo.app";
+            p3.appendChild(a);
+            p3.appendChild(document.createTextNode(" para redefinição ou ajuda com acesso."));
+            msg.appendChild(p3);
+            var p4 = document.createElement("p");
+            p4.lang = "en";
+            p4.style.marginTop = "0.35rem";
+            p4.appendChild(document.createTextNode("EN: Forgot your password or cannot sign in? Email "));
+            var a2 = document.createElement("a");
+            a2.href = mail;
+            a2.textContent = "support@barbxgo.app";
+            p4.appendChild(a2);
+            p4.appendChild(document.createTextNode(" for a reset link or access help."));
+            msg.appendChild(p4);
+          }
+        }
+
+        function showOk() {
+          if (!msg) return;
+          msg.hidden = false;
+          msg.className = "delete-account-msg ok";
+          msg.innerHTML = "";
+          var p1 = document.createElement("p");
+          p1.lang = "pt-BR";
+          p1.textContent =
+            "Conta BarbxGo eliminada com sucesso. Os dados associados foram apagados, salvo o que a lei exija manter.";
+          msg.appendChild(p1);
+          var p2 = document.createElement("p");
+          p2.lang = "en";
+          p2.style.marginTop = "0.35rem";
+          p2.textContent =
+            "Your BarbxGo account was deleted. Associated data has been removed, except where we must retain it by law.";
+          msg.appendChild(p2);
+        }
+
+        if (form && window.NaReguaApi && typeof NaReguaApi.deleteAccount === "function") {
+          form.addEventListener("submit", function (e) {
+            e.preventDefault();
+            clearMsg();
+            var email = (document.getElementById("delEmail") && document.getElementById("delEmail").value) || "";
+            var password =
+              (document.getElementById("delPassword") && document.getElementById("delPassword").value) || "";
+            var chk = document.getElementById("delConfirm");
+            if (!email.trim() || !password) {
+              showErr("Preencha e-mail e senha.", "Please enter email and password.", false);
+              return;
+            }
+            if (!chk || !chk.checked) {
+              showErr(
+                "Marque a confirmação para prosseguir.",
+                "Please check the confirmation box to proceed.",
+                false
+              );
+              return;
+            }
+            if (btn) btn.disabled = true;
+            NaReguaApi.deleteAccount(email, password)
+              .then(function () {
+                try {
+                  if (typeof NaReguaApi.setOwnerToken === "function") NaReguaApi.setOwnerToken("");
+                } catch (_e) {}
+                form.reset();
+                showOk();
+              })
+              .catch(function (err) {
+                var status = err && err.status;
+                var wrong = status === 401 || status === 403 || status === 404;
+                var m = (err && err.message) || "";
+                if (wrong) {
+                  showErr(
+                    "Credenciais incorretas ou conta não encontrada. Verifique o e-mail e a senha.",
+                    "Incorrect credentials or account not found. Check your email and password.",
+                    true
+                  );
+                } else {
+                  showErr(
+                    "Não foi possível concluir a exclusão agora: " + m + " Se o problema continuar, contacte support@barbxgo.app.",
+                    "We could not complete deletion right now: " +
+                      m +
+                      " If this persists, contact support@barbxgo.app.",
+                    true
+                  );
+                }
+              })
+              .finally(function () {
+                if (btn) btn.disabled = false;
+              });
+          });
+        } else if (form) {
+          form.addEventListener("submit", function (e) {
+            e.preventDefault();
+            showErr(
+              "Erro de configuração: API indisponível nesta página.",
+              "Configuration error: API not available on this page.",
+              true
+            );
+          });
+        }
+      })();
+    </script>
+  </body>
+</html>

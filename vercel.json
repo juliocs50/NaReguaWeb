@@ -4,11 +4,11 @@
   "outputDirectory": "public",
   "rewrites": [
     {
-      "source": "/:slug((?!js$|api$|_next$|about|privacy)[^./]+)/:path*",
+      "source": "/:slug((?!js$|api$|_next$|about|privacy|DeleteAccount)[^./]+)/:path*",
       "destination": "/index.html"
     },
     {
-      "source": "/:slug((?!js$|api$|_next$|about|privacy)[^./]+)",
+      "source": "/:slug((?!js$|api$|_next$|about|privacy|DeleteAccount)[^./]+)",
       "destination": "/index.html"
     }
   ]

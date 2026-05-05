@@ -1,5 +1,6 @@
-# Página estática (evita cair no SPA sem barra final)
+# Páginas estáticas (evitam cair no SPA sem barra final)
 /privacy  /privacy/  301
+/DeleteAccount  /DeleteAccount/  301
 
 # SPA apenas (agendamento usa Firestore no browser, não /api)
 /*    /index.html   200
