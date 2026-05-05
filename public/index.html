@@ -2,6 +2,25 @@
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
+    <!-- GitHub Pages: URL /slug devolve 404.html; sem <base>, ./styles.css viraria /slug/styles.css. Em *.github.io/project/ o prefixo é /project/. -->
+    <script>
+      (function () {
+        var host = String(location.hostname || "").toLowerCase();
+        var href = "/";
+        if (host.endsWith(".github.io")) {
+          var parts = String(location.pathname || "/")
+            .replace(/\/$/, "")
+            .split("/")
+            .filter(Boolean);
+          if (parts.length) href = "/" + parts[0] + "/";
+        }
+        var b = document.createElement("base");
+        b.href = href;
+        var cur = document.currentScript;
+        if (cur && cur.parentNode) cur.parentNode.insertBefore(b, cur);
+        else document.head.appendChild(b);
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
     <title>Barb x Go</title>
@@ -535,6 +554,6 @@
       <span>Barb x Go</span>
     </footer>
 
-    <script src="./app-rest.js?v=20260501c"></script>
+    <script src="./app-rest.js?v=20260501e"></script>
   </body>
 </html>

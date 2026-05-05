@@ -30,6 +30,10 @@ jobs:
         run: |
           if [ -f CNAME ]; then cp CNAME public/CNAME; fi
 
+      # GitHub Pages não reescreve /slug → index.html; sem isto aparece "File not found".
+      - name: SPA fallback (404.html = index.html)
+        run: cp public/index.html public/404.html
+
       - uses: actions/configure-pages@v4
 
       - uses: actions/upload-pages-artifact@v3
