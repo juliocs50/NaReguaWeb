@@ -1,0 +1,15 @@
+{
+  "name": "Barb x Go",
+  "short_name": "BarbxGo",
+  "icons": [
+    {
+      "src": "favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#000000"
+}
