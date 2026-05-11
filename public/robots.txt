@@ -1,0 +1,9 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+
+User-agent: Googlebot-Image
+Allow: /favicon.png
+Allow: /favicon.ico
+
+Sitemap: https://barbxgo.app/sitemap.xml

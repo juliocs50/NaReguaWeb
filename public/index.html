@@ -2,6 +2,38 @@
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
+    <!-- Favicon: URL absoluta (origem) ajuda o Google a associar o ícone ao domínio nos resultados de pesquisa. -->
+    <link rel="icon" type="image/png" sizes="512x512" id="nareguaFavicon" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="48x48" id="nareguaFavicon48" href="/favicon.png" />
+    <link rel="shortcut icon" type="image/png" id="nareguaFaviconShortcut" href="/favicon.png" />
+    <link rel="apple-touch-icon" id="nareguaAppleTouch" href="/favicon.png" />
+    <link rel="manifest" id="nareguaManifest" href="/site.webmanifest" />
+    <script>
+      (function () {
+        function assetPath(name) {
+          try {
+            var h = String(location.hostname || "").toLowerCase();
+            if (h.endsWith(".github.io")) {
+              var parts = String(location.pathname || "/")
+                .replace(/\/$/, "")
+                .split("/")
+                .filter(Boolean);
+              var prefix = parts.length ? "/" + parts[0] : "";
+              return prefix + "/" + name;
+            }
+          } catch (_e) {}
+          return "/" + name;
+        }
+        var p = assetPath("favicon.png");
+        ["nareguaFavicon", "nareguaFavicon48", "nareguaFaviconShortcut", "nareguaAppleTouch"].forEach(function (id) {
+          var el = document.getElementById(id);
+          if (el) el.setAttribute("href", p);
+        });
+        var m = document.getElementById("nareguaManifest");
+        if (m) m.setAttribute("href", assetPath("site.webmanifest"));
+      })();
+    </script>
+    <link rel="canonical" href="https://barbxgo.app/" />
     <!-- GitHub Pages: URL /slug devolve 404.html; sem <base>, ./styles.css viraria /slug/styles.css. Em *.github.io/project/ o prefixo é /project/. -->
     <script>
       (function () {
@@ -23,9 +55,6 @@
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
-    <link rel="icon" type="image/png" href="./favicon.png" sizes="512x512" />
-    <link rel="apple-touch-icon" href="./favicon.png" />
-    <link rel="manifest" href="./site.webmanifest" />
     <title>Barb x Go</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
