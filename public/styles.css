@@ -422,6 +422,34 @@ body.layout-landing .about-footer-lead.muted {
   display: block;
   border-radius: 7px;
   opacity: 0.95;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.about-footer-cell--apps a:hover .about-badge-play {
+  opacity: 1;
+  transform: scale(1.03);
+}
+
+.about-appstore-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.about-badge-appstore--soon {
+  opacity: 0.45;
+  filter: grayscale(0.4);
+  cursor: default;
+  pointer-events: none;
+}
+
+.about-badge-soon-label {
+  font-size: 0.72rem;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.45);
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 .about-coming-soon {
