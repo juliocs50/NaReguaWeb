@@ -404,8 +404,30 @@ body.layout-landing .about-footer-lead.muted {
 .about-footer-cell--apps .about-store-badges {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   gap: 14px 18px;
+}
+
+.about-badge-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.about-badge-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.75);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.about-badge-label--muted {
+  font-style: italic;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: none;
 }
 
 .about-badge-appstore {
@@ -430,26 +452,11 @@ body.layout-landing .about-footer-lead.muted {
   transform: scale(1.03);
 }
 
-.about-appstore-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
 .about-badge-appstore--soon {
   opacity: 0.45;
   filter: grayscale(0.4);
   cursor: default;
   pointer-events: none;
-}
-
-.about-badge-soon-label {
-  font-size: 0.72rem;
-  font-style: italic;
-  color: rgba(255, 255, 255, 0.45);
-  font-weight: 500;
-  letter-spacing: 0.02em;
 }
 
 .about-coming-soon {
